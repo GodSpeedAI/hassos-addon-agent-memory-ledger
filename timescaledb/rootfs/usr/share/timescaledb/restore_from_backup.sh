@@ -26,6 +26,17 @@ restoreFromBackup() {
         bashio::log.error "Backup file is not readable at ${BACKUP_FILE}"
         return 1
     fi
+
+    # Ensure the backup file is accessible by the postgres user
+    bashio::log.info "Fixing permissions on backup file..."
+    if ! chown postgres:postgres "${BACKUP_FILE}"; then
+        bashio::log.error "Could not change owner of backup file to postgres:postgres"
+        return 1
+    fi
+    if ! chmod 640 "${BACKUP_FILE}"; then
+        bashio::log.error "Could not change permissions of backup file"
+        return 1
+    fi
     
     # Log backup file info
     BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
