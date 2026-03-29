@@ -52,8 +52,14 @@ restoreFromBackup() {
     
     bashio::log.info "PostgreSQL is ready. Starting restore..."
     
-    # Restore the backup
-    if su - postgres -c "psql -X -U postgres -f ${BACKUP_FILE} -d postgres" 2>&1 | tee /var/log/timescaledb.restore.log; then
+    # Ensure the log directory exists (defensive: base image should provide it, but guard anyway)
+    mkdir -p /var/log
+
+    # Restore the backup – capture psql's exit code via PIPESTATUS, not tee's
+    su - postgres -c "psql -X -U postgres -f ${BACKUP_FILE} -d postgres" 2>&1 | tee /var/log/timescaledb.restore.log
+    RESTORE_EXIT=${PIPESTATUS[0]}
+
+    if [[ "${RESTORE_EXIT}" -eq 0 ]]; then
         bashio::log.notice "Database restored successfully from backup!"
         
         # Stop postgres
