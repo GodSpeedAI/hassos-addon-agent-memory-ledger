@@ -73,7 +73,7 @@ apply_postgresql_config() {
             echo "${key} = ${value}" >> "${POSTGRESQL_CONF}"
         fi
         
-        ((PARAM_COUNT++))
+        PARAM_COUNT=$(( PARAM_COUNT + 1 ))
     done
     
     if [[ ${PARAM_COUNT} -gt 0 ]]; then
@@ -88,7 +88,15 @@ apply_pg_hba_config() {
     fi
     
     bashio::log.info "Applying pg_hba.conf authentication rules..."
-    
+
+    # Remove any previously written user-defined rules to avoid duplicates on restart
+    if grep -q "^# User-defined authentication rules" "${PG_HBA_CONF}"; then
+        bashio::log.debug "Removing existing user-defined rules before re-applying..."
+        sed -i '/^# User-defined authentication rules/,$d' "${PG_HBA_CONF}"
+        # Remove any trailing blank lines left behind
+        sed -i -e :a -e '/^[[:space:]]*$/{$d;N;ba}' "${PG_HBA_CONF}"
+    fi
+
     # Add a comment separator for user rules
     echo "" >> "${PG_HBA_CONF}"
     echo "# User-defined authentication rules" >> "${PG_HBA_CONF}"
@@ -140,7 +148,7 @@ apply_pg_hba_config() {
         bashio::log.info "Adding pg_hba.conf rule: ${rule_line}"
         echo "${rule_line}" >> "${PG_HBA_CONF}"
         
-        ((RULE_COUNT++))
+        RULE_COUNT=$(( RULE_COUNT + 1 ))
     done
     
     if [[ ${RULE_COUNT} -gt 0 ]]; then
