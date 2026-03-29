@@ -182,20 +182,23 @@ else
     touch ${VERSION_FILE}
 	# Always re-apply permissions, because they seem to be reset after a snapshot restore
 	applyPermissions
-	
-	# Check if database is corrupted and we have a backup
-	if [[ -f "${BACKUP_FILE}" ]]; then
-	    # Check if PG_VERSION exists and is valid
-	    if [[ ! -f "${POSTGRES_DATA}/PG_VERSION" ]]; then
+
+	# Check if PG_VERSION exists – if it is absent the data directory is empty or corrupted
+	if [[ ! -f "${POSTGRES_DATA}/PG_VERSION" ]]; then
+	    NEW_INSTALL=true
+	    # Move the invalid/empty directory aside so we can start fresh
+	    if [[ -d "${POSTGRES_DATA}" ]]; then
+	        bashio::log.info "Moving invalid database directory aside..."
+	        mv "${POSTGRES_DATA}" "${POSTGRES_DATA}.corrupted.$(date +%Y%m%d_%H%M%S)"
+	    fi
+	    # If a SQL backup is available, restore from it; otherwise start fresh
+	    if [[ -f "${BACKUP_FILE}" ]]; then
 	        bashio::log.warning "Database appears corrupted (missing PG_VERSION). Backup SQL found."
 	        bashio::log.warning "Will attempt to restore from backup..."
 	        RESTORE_MODE=true
-	        NEW_INSTALL=true
-	        # Move corrupted data aside
-	        if [[ -d "${POSTGRES_DATA}" ]]; then
-	            bashio::log.info "Moving corrupted database aside..."
-	            mv "${POSTGRES_DATA}" "${POSTGRES_DATA}.corrupted.$(date +%Y%m%d_%H%M%S)"
-	        fi
+	    else
+	        bashio::log.warning "Database directory exists but is not initialized (missing PG_VERSION)."
+	        bashio::log.warning "No backup available. Initializing a fresh database..."
 	    fi
 	fi
 fi
