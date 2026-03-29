@@ -16,6 +16,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
                         git \
                         openssl \
                         openssl-dev \
+                        pkgconf \
                         tar \
                         wget \
                         curl \
@@ -25,12 +26,11 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
                         make \
                         cmake \
                         build-base \
-            && apk add --repository http://dl-cdn.alpinelinux.org/alpine/v3.21/main/ \
-                        rust \
-                        cargo \
+            && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable \
             && export PATH="/root/.cargo/bin:${PATH}" \
-            && cargo install --version '=0.12.8' --locked --force cargo-pgrx \
-            && cargo install rustfmt; \
+            && export OPENSSL_DIR=/usr \
+            && cargo install --version '=0.16.1' --locked --force cargo-pgrx \
+            && cargo install --force rustfmt; \
        fi
 
 # Add compatibility libraries for timescaledb toolkit
@@ -49,13 +49,14 @@ RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,tar
     set -ex \
     && if [ "$TARGETARCH" == "amd64" ] || [ "$TARGETARCH" == "arm64" ]; then \
         export PATH="/root/.cargo/bin:${PATH}" \
+        && export RUSTFLAGS="-C target-feature=-crt-static -C codegen-units=1" \
         && mkdir -p /build/ \
         && cd /build \
             && git clone https://github.com/timescale/timescaledb-toolkit.git . \
             && git checkout ${VERSION} \
             && cd extension \
             # initdb fails as root so generate the correct config ourselves
-            # && cargo pgx init --pg17 /usr/lib/postgresql/17/bin/pg_config        
+            # && cargo pgx init --pg17 /usr/lib/postgresql/17/bin/pg_config
             && mkdir -p /root/.pgrx \
             && printf '[configs]\npg17="/usr/local/bin/pg_config"\n' > /root/.pgrx/config.toml \
             && cargo pgrx install --release \

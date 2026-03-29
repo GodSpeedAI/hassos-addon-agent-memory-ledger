@@ -7,20 +7,20 @@ ARG ALPINE_VERSION=3.21
 # These images are all prebuild, otherwise building the docker images takes waaaay to long
 # Where possible, we just take the latest version from the Alpine repository, so it's
 # possible we won't mention the latest version here.
-FROM timescale/timescaledb:2.22.1-pg16                                          AS timescale-pg16
-FROM timescale/timescaledb:2.22.1-pg17                                          AS timescale-pg17
+FROM timescale/timescaledb:2.26.0-pg16                                          AS timescale-pg16
+FROM timescale/timescaledb:2.26.0-pg17                                          AS timescale-pg17
 
 # hadolint ignore=DL3007
 FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-tools:latest                    AS timescaledb-tools
 FROM ghcr.io/expaso/timescaledb/dependency/pgagent-pg16:pgagent-4.2.3                  AS pgagent-pg16
 FROM ghcr.io/expaso/timescaledb/dependency/pgagent-pg17:pgagent-4.2.3                  AS pgagent-pg17
-FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg16:3.6.0                          AS postgis-pg16
-FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg17:3.6.0                          AS postgis-pg17
-FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg16:1.21.0             AS timescaledb-toolkit-pg16
-FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg17:1.21.0             AS timescaledb-toolkit-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg16:3.6.2                          AS postgis-pg16
+FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg17:3.6.2                          AS postgis-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg16:1.22.0             AS timescaledb-toolkit-pg16
+FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg17:1.22.0             AS timescaledb-toolkit-pg17
 FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg16:3.2   AS system-stat-pg16
 FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg17:3.2   AS system-stat-pg17
-FROM ghcr.io/expaso/timescaledb/dependency/pgvector-pg17:0.8.1                         AS pgvector-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/pgvector-pg17:0.8.2                         AS pgvector-pg17
 
 
 ###########################################
@@ -112,7 +112,7 @@ COPY --from=postgis-pg16 --link /usr/local/share/postgresql/extension/postgis* /
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add  \
-        openexr \ 
+        openexr \
         poppler \
         gdal \
         geos \
@@ -120,13 +120,13 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
         libgcc \
         libpq \
         libstdc++ \
-        libxml2 \ 
+        libxml2 \
         musl \
         pcre \
         perl \
         proj \
         protobuf-c
-        
+
 # hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
