@@ -39,6 +39,9 @@ options:
   system_packages: []
   init_commands: []
   retry_upgrade: false
+  migrate_pgvector_to_ruvector: false
+  agent_memory:
+    enabled: false
   postgresql_config: {}
   pg_hba_config: []
 schema:
@@ -56,6 +59,16 @@ schema:
   init_commands:
     - str
   retry_upgrade: bool?
+  migrate_pgvector_to_ruvector: bool?
+  agent_memory:
+    enabled: bool
+    database: str?
+    create_default_schema: bool?
+    enable_ruvector: bool?
+    enable_timescaledb: bool?
+    retention_days: int(1,)?
+    embedding_dimension: int(1,4096)?
+    include_embeddings_in_backup: bool?
   postgresql_config:
     match(^[a-z_]+$)?: str?
   pg_hba_config:

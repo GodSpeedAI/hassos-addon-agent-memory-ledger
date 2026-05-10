@@ -72,13 +72,75 @@ if bashio::var.true "${UPDATE}"; then
 		&& bashio::log.info "Try updating RuVector Extension for database: '${datname}'.." \
 		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION ruvector UPDATE;" || true >> /var/log/ruvector.upgrade.log
 
-		# Also handle legacy pgvector extension (for migration)
+		# Detect legacy pgvector extension — warn but do NOT auto-migrate destructively
 		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'vector';" | grep -q 1 \
-		&& bashio::log.info "Legacy pgvector extension found in database: '${datname}'. Migrating to ruvector.." \
-		&& psql -X -U postgres -d ${datname} -c "DROP EXTENSION IF EXISTS vector CASCADE;" || true \
-		&& psql -X -U postgres -d ${datname} -c "CREATE EXTENSION IF NOT EXISTS ruvector;" || true >> /var/log/ruvector.migration.log
+		&& bashio::log.warning "Legacy pgvector extension detected in database: '${datname}'." \
+		&& bashio::log.warning "Automatic migration to ruvector is disabled to prevent data loss." \
+		&& bashio::log.warning "To migrate, enable 'migrate_pgvector_to_ruvector' in addon config." \
+		&& bashio::log.warning "See README for safe migration instructions."
 
 	done
+	fi
+
+# Safe pgvector → ruvector migration (only when explicitly enabled by user)
+if bashio::config.true 'migrate_pgvector_to_ruvector'; then
+	bashio::log.notice "pgvector→ruvector migration requested. Running preflight checks..."
+
+	MIGRATION_SAFE=true
+
+	# Fetch all databases that have pgvector installed
+	pgvector_dbs=$(psql \
+		-X \
+		-U postgres \
+		-c "select datname from pg_database where datallowconn = true;" \
+		--set ON_ERROR_STOP=on \
+		--no-align \
+		-t \
+		--field-separator ' ' \
+		--quiet \
+	| while read datname; do
+		psql -X -U postgres -d "${datname}" -c "select 1 from pg_extension where extname = 'vector';" | grep -q 1 \
+		&& echo "${datname}"
+	done)
+
+	if [[ -z "${pgvector_dbs}" ]]; then
+		bashio::log.info "No databases with pgvector extension found. Nothing to migrate."
+	else
+		for datname in ${pgvector_dbs}; do
+			bashio::log.info "Checking database '${datname}' for pgvector dependencies..."
+
+			# Check for columns using the vector type
+			vector_cols=$(psql -X -U postgres -d "${datname}" -t -A -c \
+				"SELECT count(*) FROM information_schema.columns WHERE udt_name = 'vector';" 2>/dev/null || echo "0")
+
+			if [[ "${vector_cols}" -gt 0 ]]; then
+				bashio::log.error "Database '${datname}' has ${vector_cols} column(s) using the 'vector' type."
+				bashio::log.error "Dropping pgvector would DESTROY these columns and dependent objects!"
+				bashio::log.error "You must manually migrate vector(n) columns to ruvector(n) first."
+				bashio::log.error "Skipping migration for '${datname}'."
+				MIGRATION_SAFE=false
+			else
+				bashio::log.info "Database '${datname}' has pgvector but no vector-typed columns. Safe to migrate."
+			fi
+		done
+
+			if bashio::var.true "${MIGRATION_SAFE}"; then
+				for datname in ${pgvector_dbs}; do
+					bashio::log.notice "Migrating pgvector → ruvector for database: '${datname}'..."
+					psql -X -U postgres -d "${datname}" -c "DROP EXTENSION IF EXISTS vector;"
+					rc=$?
+					if [[ ${rc} -ne 0 ]]; then
+						bashio::log.error "Failed to run DROP EXTENSION IF EXISTS vector; in database '${datname}' (exit ${rc})."
+						exit "${rc}"
+					fi
+					psql -X -U postgres -d "${datname}" -c "CREATE EXTENSION IF NOT EXISTS ruvector;" || true
+					bashio::log.info "Migration complete for '${datname}'."
+				done
+			bashio::log.notice "pgvector migration completed successfully."
+		else
+			bashio::log.error "pgvector migration aborted due to dependent columns. Resolve manually."
+		fi
+	fi
 fi
 
 
@@ -98,6 +160,23 @@ if bashio::config.has_value 'databases'; then
 		fi;
 	done
 fi
+bashio::log.info "done"
+
+# Setup agent_memory profile if enabled
+if bashio::config.true 'agent_memory.enabled'; then
+	bashio::log.info "Setting up agent_memory profile..."
+	chmod 700 "/usr/share/timescaledb/004_setup_agent_memory.sh"
+	/usr/share/timescaledb/004_setup_agent_memory.sh
+	bashio::log.info "done"
+fi
+
+# Log extension health (installed versions)
+bashio::log.info "Extension health check..."
+psql -X -U postgres -t -A -c \
+	"SELECT extname || ' ' || extversion FROM pg_extension ORDER BY extname;" \
+	| while read ext_info; do
+		bashio::log.info "  Extension: ${ext_info}"
+	done
 bashio::log.info "done"
 
 # Exit update mode

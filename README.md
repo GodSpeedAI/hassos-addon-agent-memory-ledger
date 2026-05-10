@@ -1,84 +1,338 @@
-# Home Assistant Add-on: [PostgreSQL](https://www.postgresql.org/) [TimescaleDB](https://www.timescale.com/)
+# Agent Memory Ledger
 
-## [PostgreSql](https://www.postgresql.org/) & [Postgis](https://postgis.net/) & [TimescaleDB](https://www.timescale.com/) & [TimescaleDB Toolkit](https://github.com/timescale/timescaledb-toolkit) & [pgAgent](https://www.pgadmin.org/docs/pgadmin4/development/pgagent.html) & [RuVector](https://github.com/ruvnet/ruvector)
+## Governed Autonomous Event Infrastructure for Home Assistant
 
-<a href="https://www.buymeacoffee.com/expaso" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+Agent Memory Ledger is a Home Assistant add-on that provisions PostgreSQL,
+TimescaleDB, and RuVector as infrastructure for governed autonomous systems.
 
-## PostgreSQL Overview
+It provides:
 
-From: https://www.postgresql.org/about/
+- append-only agent event history
+- governed action admission records
+- replayable policy state
+- lineage-aware identities
+- vector-backed qualified memory
+- audit-grade provenance
+- broker-ready inbox/outbox tables
+- temporal and causal reconstruction primitives
 
-PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads. The origins of PostgreSQL date back to 1986 as part of the POSTGRES project at the University of California at Berkeley and has more than 30 years of active development on the core platform.
+The project is designed for:
 
-PostgreSQL has earned a strong reputation for its proven architecture, reliability, data integrity, robust feature set, extensibility, and the dedication of the open source community behind the software to consistently deliver performant and innovative solutions.
+- AI coding agents
+- MCP tool ecosystems
+- Home Assistant automations
+- distributed autonomous workflows
+- governed multi-agent systems
+- local-first cognitive infrastructure
+- semantic and event-driven runtime systems
 
-## TimescaleDB Overview
+The system treats autonomous activity as governed state evolution, not transient
+execution.
 
-From: https://docs.timescale.com/latest/introduction
+## Platform Foundation
 
-TimescaleDB is an open-source time-series database optimized for fast ingest and complex queries. It speaks "full SQL" and is correspondingly easy to use like a traditional relational database, yet scales in ways previously reserved for NoSQL databases.
+This add-on builds on:
 
-Compared to the trade-offs demanded by these two alternatives (relational vs. NoSQL), TimescaleDB offers the best of both worlds for time-series data:
+| Component | Purpose |
+| --- | --- |
+| PostgreSQL | Canonical relational persistence |
+| TimescaleDB | Temporal/event scaling and hypertables |
+| RuVector | Vector similarity and embedding search |
+| PostGIS | Geospatial extension support |
+| TimescaleDB Toolkit | Time-series analysis helpers |
+| pgAgent | PostgreSQL job scheduling |
 
-### Easy to Use
+It can still be used as a general PostgreSQL + TimescaleDB add-on for Home
+Assistant recorder data, Grafana dashboards, monitoring, and SQL-based
+time-series workloads. The Agent Memory profile adds governed event, memory,
+identity, and audit schemas on top of that database foundation.
 
-Full SQL interface for all SQL natively supported by PostgreSQL (including secondary indexes, non-time based aggregates, sub-queries, JOINs, window functions).
+## Core Principles
 
-- Connects to any client or tool that speaks PostgreSQL, no changes needed.
-- Time-oriented features, API functions, and optimizations.
-- Robust support for Data retention policies.
+### 1. Canonical History Is Sacred
 
-## Introduction
+Raw events are canonical. Derived artifacts are not.
 
-Say, you want put all those nice Home Assistant measurements from your smarthome to good use, and for example, use something like [Grafana](https://grafana.com) for your dashboards, and maybe [Prometheus](https://prometheus.io/) for monitoring..
+Derived artifacts include:
 
-**That means you need a decent time-series database.**
+- summaries
+- embeddings
+- dashboards
+- audit reports
+- reflections
+- projections
+- analytics
 
-You could use [InfluxDB](www.influxdata.com) for this.
-This works pretty good.. but.. being a NoSQL database, this means you have to learn Flux (it's query language). Once you get there, you will quickly discover that updating existing data in Influx is near impossible (without overwriting it). That's a bummer, since my data needed some 'tweaking'.
+Derived state must remain separable from canonical history:
 
-For the Home Assistant recorder, you probaly need some SQL storage too. That means you also need to
-bring stuff like MariaDb or Postgres to the table (unless you keep using the SqlLite database).
+```text
+derived_state != canonical_history
+```
 
-So.. why not combine these?
-Seriously?! You ask...
+Embeddings never replace facts. Summaries never replace memory. Audit views
+never replace events.
 
-Yeah! Pleae read this blogpost to get a sense of why:
+### 2. Governance Is Transition Admissibility
 
-https://blog.timescale.com/blog/why-sql-beating-nosql-what-this-means-for-future-of-data-time-series-database-348b777b847a/
+Every meaningful action is modeled as a transition. A transition is valid only
+when admitted under the active governance context.
 
-And so.. Use the power of your already existing SQL skills for PostgreSQL, combined with powerfull time-series functionality of TimeScaleDb and be done with it!
+Examples include:
 
-As a bonus, I also added a Geospatial extention: [Postgis](https://postgis.net/).
-You can now happily query around your data like a PRO 😎.
+- tool execution
+- file write
+- command execution
+- memory promotion
+- network request
+- policy override
+- identity mutation
+
+The system records the request, admission decision, policy version, acting
+identity, lineage/provenance chain, and resulting event history. This makes
+governance replayable and auditable.
+
+### 3. Identity Is Governed State
+
+Identities are governed entities. They may be created, retired, aliased, merged,
+split, reclassified, delegated, or inherited.
+
+The system preserves organizational continuity through lineage rather than
+immutability:
+
+```text
+organizational systems preserve identity by lineage, not immutability
+```
+
+### 4. Causality Matters More Than Wall-Clock Time
+
+The system models partially ordered transitions rather than assuming globally
+synchronized clocks. Wall-clock timestamps exist, but causal ordering is the
+primary architectural primitive for replay, governance reconstruction, and
+distributed workflows.
+
+## Architecture Overview
+
+| Component | Purpose |
+| --- | --- |
+| Event Ledger | Append-only transition history |
+| Governance Ledger | Action admission, policies, and auditability |
+| Identity Ledger | Governed identity lifecycle and lineage |
+| Memory Lifecycle | Promotion from observation to qualified memory |
+| Embeddings | RuVector-backed semantic retrieval |
+| Replay Layer | Governance reconstruction at a point in time |
+| Audit Projections | Derived evidence views linked to source events |
+| Inbox/Outbox Layer | Broker interoperability and retry-safe delivery |
+
+The system is an append-only temporal graph of governed transitions. Core
+entities include agents, humans, services, tools, resources, workspaces,
+policies, action requests, governance decisions, memory candidates, and
+qualified memories.
+
+Everything evolves through events. Nothing silently mutates.
+
+## Storage Model
+
+When the Agent Memory profile is enabled, the add-on creates an `agent_memory`
+database by default.
+
+| Schema | Purpose |
+| --- | --- |
+| `event_log` | Canonical event history plus inbox/outbox tables |
+| `memory` | Qualified memory lifecycle |
+| `embeddings` | RuVector embedding storage |
+| `governance` | Identity, policy, action, lineage, and replay state |
+| `kg` | Optional graph/semantic projections |
+| `audit` | Optional derived audit projections |
+
+The currently provisioned schema files focus on `event_log`, `memory`,
+`embeddings`, and `governance`.
+
+## Event Model
+
+Events are append-only immutable records.
+
+Examples:
+
+- agent session started
+- tool invocation requested
+- file write proposed
+- file write accepted
+- memory candidate created
+- memory accepted
+- policy override requested
+- action rejected
+- identity merged
+- role assigned
+
+Event guarantees include immutable event IDs, provenance linkage, append-only
+semantics, replayability support, policy version traceability, and identity
+lineage traceability.
+
+## Memory System
+
+Raw events are observations. Memory is governed promotion.
+
+```text
+observed -> candidate -> accepted -> verified -> superseded / rejected / expired
+```
+
+The system separates:
+
+```text
+what happened
+```
+
+from:
+
+```text
+what the system chooses to remember
+```
+
+RuVector-backed embeddings support semantic recall, memory retrieval, similarity
+search, and contextual materialization. Embeddings are linked to qualified memory
+objects, not directly to raw events. Embeddings are regenerable; canonical
+history is not.
+
+## Identity Governance
+
+Supported identity classes include:
+
+- agent
+- human
+- service
+- tool
+- role
+- workspace
+- resource
+
+Supported identity transitions include:
+
+```text
+create_identity
+retire_identity
+alias_identity
+split_identity
+merge_identity
+reclassify_identity
+bind_role
+unbind_role
+```
+
+Identity transitions are first-class events. They participate in causal ordering
+like operational actions.
+
+The system maintains a lineage DAG over identities. This enables organizational
+continuity, delegated authority tracing, replayable provenance, auditability
+after mergers/splits, and identity inheritance policies. The lineage graph is
+enforced as acyclic.
+
+## Governed Agent Action Ledger
+
+The Governed Agent Action Ledger answers:
+
+```text
+Did this identity have authority
+to perform this transition
+under the active governance context?
+```
+
+Action flow:
+
+1. The acting identity exists and remains valid.
+2. An action request is submitted.
+3. The governance layer evaluates identity validity, lineage, role bindings,
+   active policy versions, resource constraints, and transition admissibility.
+4. A decision is recorded: `accepted`, `rejected`, `requires_review`, or
+   `deferred`.
+5. Accepted and rejected actions both become canonical history.
+
+The ledger stores infrastructure primitives. It is not a policy engine, planner,
+or workflow orchestrator.
+
+## Replayability
+
+The system is designed for governance replayability, not full environmental
+determinism.
+
+Replay reconstructs:
+
+- why a decision occurred
+- which policy allowed or rejected it
+- which identity lineage authorized it
+- which role bindings were active
+- which causal history preceded it
+
+Available replay helpers include:
+
+| Function or view | Purpose |
+| --- | --- |
+| `governance.identity_status_at(identity_id, timestamp)` | Identity status at a point in time |
+| `governance.role_bindings_at(identity_id, timestamp)` | Active role bindings at a point in time |
+| `governance.active_policy_at(policy_name, timestamp)` | Active policy version at a point in time |
+| `governance.lineage_ancestors(identity_id, max_depth)` | Identity lineage traversal |
+| `governance.replay_identity_status` | Current identity status with source event reference |
+
+## Inbox / Outbox Infrastructure
+
+Broker-ready tables support RabbitMQ, NATS, event streaming systems, and
+distributed ingestion without coupling the database to a specific broker.
+
+Included tables:
+
+- `event_log.inbox_events`
+- `event_log.outbox_events`
+- `event_log.delivery_attempts`
+
+These tables support replay-safe ingestion, idempotent delivery, retry
+semantics, and delivery audit trails.
+
+## Auditability
+
+Audit projections are derived evidence views over canonical history.
+
+Examples:
+
+- action timelines
+- policy usage reports
+- rejected action analysis
+- identity lineage reports
+- governance replay traces
+
+Current governance audit views include:
+
+| View | Purpose |
+| --- | --- |
+| `governance.audit_action_timeline` | Action requests with identity, decision, and policy context |
+| `governance.audit_identity_lineage` | Human-readable lineage relationships |
+| `governance.audit_policy_usage` | Policy version usage statistics |
+| `governance.audit_rejected_actions` | Rejected actions with governance context |
+| `governance.replay_identity_status` | Current identity status with last event reference |
+
+All derived views preserve source-event linkage. Audit artifacts can trace back
+to canonical events.
 
 ## Installation
 
-There are two ways to install this add-on: via the Home Assistant add-on store or, by running the container manually on a separate (more powerfull?) machine.
-This could come in handy if you want to use a more powerfull machine for your database, or if you want to use a different OS than Home Assistant OS.
-
-### Home Assistant add-on store
+### Home Assistant Add-on Store
 
 [![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fexpaso%2Fhassos-addons)
 
-Or in the Home-Assistant add-on store, a possibility to add a repository is provided.
-Use the following URL to add this repository:
+Or add this repository URL in the Home Assistant add-on store:
 
-```txt
+```text
 https://github.com/expaso/hassos-addons
 ```
 
-Now scroll down and select the "TimeScaleDb" add-on.
-Press install to download the add-on and unpack it on your machine. This can take some time.
+Select the `TimeScaleDb` add-on, install it, start it, and review the add-on
+logs.
 
-Start the add-on, check the logs of the add-on to see if everything went well.
+### Standalone Container
 
-### Running the container standalone.
+You can also run the container on a separate Docker host.
 
-In this case, you need to have a working Docker installation on your machine.
-pull one of the images for the desired architecture from docker hub:
+Pull the image for your architecture:
 
-```
+```bash
 docker pull ghcr.io/expaso/timescaledb/amd64:stable
 docker pull ghcr.io/expaso/timescaledb/aarch64:stable
 docker pull ghcr.io/expaso/timescaledb/armv7:stable
@@ -86,76 +340,81 @@ docker pull ghcr.io/expaso/timescaledb/armhf:stable
 docker pull ghcr.io/expaso/timescaledb/i386:stable
 ```
 
-You can replace latest with the version number you want to use.
+Run it in the foreground:
 
-Simply start it like this:
-
-```
+```bash
 docker run \
   --rm \
   --name timescaledb \
-  --v ${PWD}/timescaledb_addon_data:/data \
+  -v "${PWD}/timescaledb_addon_data:/data" \
   -p 5432:5432 \
-  ghcr.io/expaso/timescaledb/amd64:dev
+  ghcr.io/expaso/timescaledb/amd64:stable
 ```
 
-This will use ~/timescaledb_addon_data as the data directory for the container, and map the port 5432 to the host.
+Run it as a daemon:
 
-If you want to start the container as a daemon, simply remove the `--rm` option and add the `-d` option like so:
-
-```
+```bash
 docker run \
   -d \
   --name timescaledb \
-  --v ${PWD}/timescaledb_addon_data:/data \
+  -v "${PWD}/timescaledb_addon_data:/data" \
   -p 5432:5432 \
-  ghcr.io/expaso/timescaledb/amd64:dev
+  ghcr.io/expaso/timescaledb/amd64:stable
 ```
 
-## Usage
+This maps PostgreSQL port `5432` and stores add-on data in
+`./timescaledb_addon_data`.
 
-You are now ready to start using Postgres with TimescaleDb extenstions enabled!
+## Enabling Agent Memory Ledger
 
-Seeking a nice web-based client? **Try the pgAdmin4 addon.**
+Add the Agent Memory profile to the add-on configuration:
 
-Please do not forget to also map the TCP/IP port in the network-section of the addon to the desired port number.
-The default is port `5432`
-
-**Securiy Notice!**
-
-The default username is `postgres` with password `homeassistant`.
-Make sure you change this immediately after activating the add-on:
-
-```
-ALTER USER user_name WITH PASSWORD 'strongpassword';
-```
-
-A default `pg_hba.conf` is created in the data directory with the following content, which allows local peer users and network users with passwords.:
-
-```
-# TYPE  DATABASE        USER            ADDRESS                 METHOD
-host    all             all             0.0.0.0/0               md5"
-local   all             all             0.0.0.0/0               md5"
-local   all             all             0.0.0.0/0               peer"
+```yaml
+agent_memory:
+  enabled: true
+  database: agent_memory
+  create_default_schema: true
+  enable_ruvector: true
+  enable_timescaledb: true
+  retention_days: 90
+  embedding_dimension: 1536
+  include_embeddings_in_backup: true
 ```
 
-Please review this configuration carefully by examine the docs:
-https://www.postgresql.org/docs/devel/auth-pg-hba-conf.html
+Options:
 
-## Advanced Configuration
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `enabled` | `false` | Enables the Agent Memory profile |
+| `database` | `agent_memory` | Database to create/use |
+| `create_default_schema` | `true` | Applies bundled schema files |
+| `enable_ruvector` | `true` | Enables RuVector and vector search |
+| `enable_timescaledb` | `true` | Enables TimescaleDB and hypertables |
+| `retention_days` | `90` | Retention period for event hypertables |
+| `embedding_dimension` | `1536` | RuVector dimension, from 1 to 4096 |
+| `include_embeddings_in_backup` | `true` | Includes embeddings in SQL backups |
 
-### PostgreSQL Configuration
+When enabled, the add-on applies conservative PostgreSQL defaults suitable for
+small Home Assistant systems:
 
-#### Option: `postgresql_config`
+- `shared_buffers = 256MB`
+- `effective_cache_size = 768MB`
+- `work_mem = 16MB`
+- `maintenance_work_mem = 128MB`
+- `max_worker_processes = 4`
+- `max_parallel_workers_per_gather = 2`
+- `jit = off`
 
-Allows you to customize PostgreSQL server parameters. These settings are applied to `postgresql.conf` and can override default settings configured by the addon.
+Override these with `postgresql_config` when your hardware can support higher
+limits.
 
-**Example:**
+## PostgreSQL Configuration
+
+Use `postgresql_config` for declarative PostgreSQL settings:
 
 ```yaml
 postgresql_config:
-  log_statement: "all"
-  log_min_duration_statement: "1000" # Log queries taking > 1 second
+  log_min_duration_statement: "1000"
   work_mem: "16MB"
   maintenance_work_mem: "256MB"
   effective_cache_size: "4GB"
@@ -163,246 +422,166 @@ postgresql_config:
   checkpoint_completion_target: "0.9"
 ```
 
-See the [PostgreSQL documentation](https://www.postgresql.org/docs/current/runtime-config.html) for all available parameters and their meanings.
+Notes:
 
-**Important Notes:**
+- Configuration changes require an add-on restart.
+- Critical parameters such as `shared_preload_libraries`, `port`, and
+  `data_directory` are managed by the add-on.
+- Invalid parameters are logged and skipped.
+- User settings are applied after TimescaleDB tuning.
 
-- Configuration changes require a restart of the addon to take effect
-- Some critical parameters cannot be modified (e.g., `shared_preload_libraries`, `port`, `data_directory`) as they are managed by the addon
-- Invalid parameter names or values will be logged and skipped
-- Parameters are applied after TimescaleDB tuning, so you can override tuned values if needed
-
-**Common Use Cases:**
-
-**Performance Tuning:**
-
-```yaml
-postgresql_config:
-  work_mem: "32MB"
-  maintenance_work_mem: "512MB"
-  effective_cache_size: "8GB"
-```
-
-**Query Logging for Debugging:**
-
-```yaml
-postgresql_config:
-  log_statement: "all"
-  log_duration: "on"
-  log_min_duration_statement: "500"
-```
-
-**Connection Settings:**
-
-```yaml
-postgresql_config:
-  idle_in_transaction_session_timeout: "60000"
-  statement_timeout: "30000"
-```
-
-#### Option: `pg_hba_config`
-
-Allows you to add custom authentication rules to `pg_hba.conf`. These rules control which hosts can connect to the database and how they authenticate.
-
-**Example:**
+Use `pg_hba_config` to append authentication rules:
 
 ```yaml
 pg_hba_config:
-  # Allow specific subnet with password authentication
   - type: "host"
-    database: "homeassistant"
+    database: "all"
     user: "all"
     address: "192.168.1.0/24"
-    method: "md5"
-
-  # Require SSL for remote admin connections
-  - type: "hostssl"
-    database: "all"
-    user: "admin"
-    address: "0.0.0.0/0"
     method: "scram-sha-256"
-
-  # Reject specific user from connecting
   - type: "host"
     database: "all"
     user: "guest"
     address: "0.0.0.0/0"
     method: "reject"
-
-  # Allow local connections without password for specific user
-  - type: "local"
-    database: "all"
-    user: "backup"
-    method: "trust"
 ```
 
-**Rule Format:**
+Rules are appended to defaults and evaluated in order. Incorrect authentication
+rules can lock you out of the database, so keep at least one known-good access
+path.
 
-- `type`: Connection type - `local` (Unix socket), `host` (TCP/IP), `hostssl` (TCP/IP with SSL), `hostnossl` (TCP/IP without SSL)
-- `database`: Database name or `all` for all databases
-- `user`: Username or `all` for all users
-- `address`: CIDR address (required for non-local types, e.g., `192.168.1.0/24` or `0.0.0.0/0`)
-- `method`: Authentication method - `md5`, `scram-sha-256`, `trust`, `reject`, `peer`, `ident`, etc.
-- `options`: Optional authentication options (e.g., `clientcert=verify-full`)
+For advanced cases not covered by declarative configuration, `init_commands`
+remains available.
 
-See the [PostgreSQL documentation](https://www.postgresql.org/docs/current/auth-pg-hba-conf.html) for complete details on authentication methods.
+## Security Model
 
-**Important Notes:**
+The add-on uses SCRAM-SHA-256 authentication by default.
 
-- Custom rules are **appended** to the default rules (not replaced)
-- Default rules remain in place to ensure basic connectivity
-- Rules are evaluated in order - the first matching rule is used
-- Invalid rules will be logged and skipped
-- Changes require a restart of the addon to take effect
+The default PostgreSQL user is `postgres` with password `homeassistant`. Change
+it immediately after first start:
 
-**⚠️ Warning:** Incorrect `pg_hba.conf` configuration can lock you out of the database. Always ensure you have at least one working authentication rule before adding restrictions.
-
-**Common Use Cases:**
-
-**Restrict access to specific network:**
-
-```yaml
-pg_hba_config:
-  - type: "host"
-    database: "all"
-    user: "all"
-    address: "192.168.1.0/24"
-    method: "md5"
-  - type: "host"
-    database: "all"
-    user: "all"
-    address: "0.0.0.0/0"
-    method: "reject"
+```sql
+ALTER USER postgres WITH PASSWORD 'strongpassword';
 ```
 
-**Require SSL for all external connections:**
-
-```yaml
-pg_hba_config:
-  - type: "hostssl"
-    database: "all"
-    user: "all"
-    address: "0.0.0.0/0"
-    method: "scram-sha-256"
-  - type: "hostnossl"
-    database: "all"
-    user: "all"
-    address: "0.0.0.0/0"
-    method: "reject"
-```
-
-**Allow passwordless local backup user:**
-
-```yaml
-pg_hba_config:
-  - type: "local"
-    database: "all"
-    user: "backup_user"
-    method: "peer"
-```
-
-### Migration from `init_commands`
-
-If you're currently using `init_commands` to modify PostgreSQL configuration, you can migrate to the new declarative approach:
-
-**Old way (still works):**
-
-```yaml
-init_commands:
-  - 'sed -i -e "/log_statement =/ s/= .*/= '\''all'\''/" /data/postgres/postgresql.conf'
-  - 'sed -i -e "/work_mem =/ s/= .*/= '\''32MB'\''/" /data/postgres/postgresql.conf'
-```
-
-**New way (recommended):**
-
-```yaml
-postgresql_config:
-  log_statement: "all"
-  work_mem: "32MB"
-```
-
-The new approach is simpler, safer, and easier to maintain. The `init_commands` option remains available for advanced use cases that aren't covered by the declarative configuration.
+The platform is designed for governance-grade observability through append-only
+event philosophy, immutable governance history, policy-version traceability, and
+provenance preservation.
 
 ## Backup and Restore
 
-This addon implements a robust backup and restore mechanism designed to protect your database from data loss.
+Home Assistant backups use SQL dumps rather than raw PostgreSQL data files.
 
-### How Backups Work
+Backup flow:
 
-When Home Assistant's backup system runs, it automatically:
+1. `backup_pre.sh` runs `pg_dumpall` and writes `/data/backup_db.sql`.
+2. Home Assistant backs up the SQL dump and add-on data.
+3. `backup_post.sh` removes the temporary SQL dump.
 
-1. **Pre-Backup**: Executes `pg_dumpall` to create a complete SQL dump of all databases (`backup_db.sql`)
-2. **Backup**: Backs up the SQL dump file along with other addon data (but excludes the PostgreSQL data directory)
-3. **Post-Backup**: Removes the temporary SQL dump file to save space
+Restore flow:
 
-This approach has several advantages:
+1. The add-on starts with the restored SQL dump.
+2. If the PostgreSQL data directory is missing or unusable, the add-on
+   initializes a fresh database.
+3. The SQL dump is restored automatically.
+4. The dump is removed after successful restoration.
 
-- **Consistency**: SQL dumps are transaction-consistent snapshots
-- **Safety**: No risk of backing up corrupted or in-transition database files
-- **Portability**: SQL dumps can be restored across different PostgreSQL versions
-- **Small Size**: Excludes the large PostgreSQL data directory from backup
+This keeps backups portable across systems and PostgreSQL versions, while
+excluding the large PostgreSQL data directory from Home Assistant backups.
 
-### How Restore Works
+Manual backup:
 
-When you restore a Home Assistant backup:
-
-1. The addon starts up with the restored `backup_db.sql` file
-2. If the PostgreSQL data directory is missing or corrupted, the addon:
-   - Initializes a fresh PostgreSQL database
-   - Automatically restores all data from the SQL dump
-   - Removes the SQL dump after successful restoration
-
-This automatic recovery process ensures your data is safely restored even if:
-
-- The database files were corrupted
-- You're restoring to a different system
-- A PostgreSQL upgrade failed
-
-### Manual Backup
-
-You can also create manual backups using the PostgreSQL command-line tools:
-
-**Create a backup:**
+Use `addon_timescaledb_timescaledb` for the Home Assistant add-on container.
+Use `timescaledb` for the standalone container examples above.
 
 ```bash
-docker exec addon_timescaledb_timescaledb su - postgres -c "pg_dumpall -U postgres --clean --if-exists -f /data/manual_backup_$(date +%Y%m%d).sql"
+docker exec addon_timescaledb_timescaledb \
+  su - postgres -c "pg_dumpall -U postgres --clean --if-exists -f /data/manual_backup_$(date +%Y%m%d).sql"
 ```
 
-**Restore from a manual backup:**
+Manual restore:
 
 ```bash
-docker exec addon_timescaledb_timescaledb su - postgres -c "psql -U postgres -f /data/manual_backup_YYYYMMDD.sql -d postgres"
+docker exec addon_timescaledb_timescaledb \
+  su - postgres -c "psql -U postgres -f /data/manual_backup_YYYYMMDD.sql -d postgres"
 ```
 
-### Important Notes
+If `include_embeddings_in_backup` is `false`, the `embeddings` schema is
+excluded to reduce backup size. Embeddings can be regenerated from qualified
+memory objects.
 
-- The SQL dump is only present during the backup process and is automatically cleaned up
-- If you need to keep a copy of the backup SQL file, copy it before the backup completes
-- The PostgreSQL data directory (`/data/postgres/*`) is excluded from backups to reduce backup size and improve reliability
-- Restore is automatic - no manual intervention required when restoring from a Home Assistant backup
+## RuVector and pgvector Migration
 
-### Troubleshooting
+This add-on uses RuVector for embedding storage. If you previously used
+`pgvector`, automatic migration is disabled by default to prevent data loss.
 
-**If restore fails:**
+To migrate:
 
-1. Check the addon logs for detailed error messages
-2. The backup SQL file will be preserved at `/data/backup_db.sql` for manual recovery
-3. You can attempt manual restoration using:
+1. Check all databases for columns using the `vector` type.
+2. Convert dependent columns to `ruvector` manually if needed.
+3. Set `migrate_pgvector_to_ruvector: true`.
+4. Restart the add-on and check logs.
 
-   ```bash
-   docker exec -it addon_timescaledb_timescaledb su - postgres -c "psql -U postgres -f /data/backup_db.sql -d postgres"
-   ```
+If dependent `vector` columns still exist, migration is aborted.
 
-**If backup fails:**
+## Validation
 
-- Check that PostgreSQL is running during the backup
-- Ensure there's sufficient disk space for the SQL dump
-- Review the addon logs for specific error messages
+Run validation inside the container:
 
-### Now what..
+```bash
+/usr/share/timescaledb/validate_agent_memory.sh
+/usr/share/timescaledb/validate_governance.sh
+```
 
-Well.. Dive in!
+The governance validation covers schema presence, identity lifecycle operations,
+lineage cycle rejection, append-only protections, policy replay lookup,
+accepted/rejected action requests, and audit projection generation.
 
-You can read additional documentation on how you van work with your data and Grafana here:
+## Example Use Cases
 
-https://github.com/expaso/hassos-addons/issues/1
+### Local AI Coding Infrastructure
+
+Govern local coding agents, MCP toolchains, and automation runtimes. Track file
+mutations, tool usage, command execution, memory writes, policy decisions, and
+provenance.
+
+### Home Assistant Autonomous Automations
+
+Govern automations capable of device control, notification dispatch, workflow
+execution, and network operations while preserving auditability, replayability,
+causal history, and policy traceability.
+
+### Multi-Agent Coordination
+
+Track delegation, authority inheritance, role transitions, policy evolution, and
+inter-agent actions with replayable governance state.
+
+### Time-Series Home Assistant Storage
+
+Use PostgreSQL and TimescaleDB for recorder data, sensor history, Grafana
+dashboards, and SQL-based analytics. TimescaleDB gives Home Assistant users
+time-series scaling while retaining the PostgreSQL ecosystem.
+
+## Non-Goals
+
+This project is not:
+
+- a full agent framework
+- a workflow orchestrator
+- a policy engine
+- a distributed consensus system
+- a general-purpose graph database
+- a replacement for Home Assistant core
+
+It is infrastructure for governed autonomous state evolution.
+
+## Guiding Formal Principle
+
+```text
+Robust systems preserve identity,
+causality,
+and recoverability
+under constrained change.
+```
+
+That principle drives the architecture.

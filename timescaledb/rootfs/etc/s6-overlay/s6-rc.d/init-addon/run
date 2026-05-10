@@ -33,11 +33,11 @@ initializeDataDirectory () {
 	# Set timescaledb and pg_stat_statements as being enabled in the postgres config file.
 	sed -r -i "s/[#]*\s*(shared_preload_libraries)\s*=\s*'(.*)'/\1 = 'timescaledb,pg_stat_statements,\2'/;s/,'''/'/;s/,'/'/" ${POSTGRES_DATA}/postgresql.conf
 	
-	# Set Password protect IPv4 hosts by default
-	echo "host    all             all             0.0.0.0/0               md5" >> ${POSTGRES_DATA}/pg_hba.conf
+	# Set Password protect IPv4 hosts by default (scram-sha-256 is preferred over md5)
+	echo "host    all             all             0.0.0.0/0               scram-sha-256" >> ${POSTGRES_DATA}/pg_hba.conf
 	# Set Password protect IPv6 hosts by default
-	echo "host    all             all             ::/0                    md5" >> ${POSTGRES_DATA}/pg_hba.conf
-	echo "local    all             all                                    md5" >> ${POSTGRES_DATA}/pg_hba.conf
+	echo "host    all             all             ::/0                    scram-sha-256" >> ${POSTGRES_DATA}/pg_hba.conf
+	echo "local    all             all                                    scram-sha-256" >> ${POSTGRES_DATA}/pg_hba.conf
 	echo "local    all             all                                   peer" >> ${POSTGRES_DATA}/pg_hba.conf
 	# Set Listen on all addresses (*)
 	sed -r -i "s/[#]listen_addresses.=.'.*'/listen_addresses\ \=\ \'\*\'/g" ${POSTGRES_DATA}/postgresql.conf
@@ -94,12 +94,13 @@ upgradeTimeScaleExtension () {
 			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION ruvector UPDATE;" || true)
 		)
 
-		# Migrate legacy pgvector to ruvector if present
+		# Detect legacy pgvector extension — warn but do NOT auto-migrate destructively
 		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'vector';" | grep -q 1 \
 		&& (
-			bashio::log.info "Migrating legacy pgvector to ruvector for database: '${datname}'.."; \
-			(psql -X -U postgres -d ${datname} -c "DROP EXTENSION IF EXISTS vector CASCADE;" || true) \
-			&& (psql -X -U postgres -d ${datname} -c "CREATE EXTENSION IF NOT EXISTS ruvector;" || true)
+			bashio::log.warning "Legacy pgvector extension detected in database: '${datname}'." \
+			&& bashio::log.warning "Automatic migration to ruvector is disabled to prevent data loss." \
+			&& bashio::log.warning "To migrate, enable 'migrate_pgvector_to_ruvector' in addon config." \
+			&& bashio::log.warning "See README for safe migration instructions."
 		)
 
 	done
@@ -315,6 +316,52 @@ fi
 if bashio::config.has_value 'max_connections'; then
 	bashio::log.info "Applying max connections.."
 	sed -i -e "/max_connections =/ s/= .*/= $(bashio::config 'max_connections')/" ${POSTGRES_DATA}/postgresql.conf
+	bashio::log.info "done"
+fi
+
+# Apply agent_memory profile tuning defaults
+# These are conservative defaults suitable for small Home Assistant hardware.
+# User-provided postgresql_config overrides take precedence.
+if bashio::config.true 'agent_memory.enabled'; then
+	bashio::log.info "Applying agent_memory profile tuning defaults..."
+	AGENT_MEMORY_CONF="${POSTGRES_DATA}/postgresql.conf.auto.agent_memory"
+
+	# Only write defaults file if it doesn't already exist (idempotent)
+	if [[ ! -f "${AGENT_MEMORY_CONF}" ]]; then
+		cat > "${AGENT_MEMORY_CONF}" << 'AGENT_MEMORY_DEFAULTS'
+# ==============================================================================
+# Agent Memory Profile - PostgreSQL Tuning Defaults
+# Conservative settings for small Home Assistant hardware
+# These can be overridden via the postgresql_config addon option
+# ==============================================================================
+shared_buffers = 256MB
+effective_cache_size = 768MB
+work_mem = 16MB
+maintenance_work_mem = 128MB
+wal_buffers = 8MB
+default_statistics_target = 100
+random_page_cost = 1.1
+effective_io_concurrency = 200
+max_worker_processes = 4
+max_parallel_workers_per_gather = 2
+max_parallel_workers = 4
+max_parallel_maintenance_workers = 2
+jit = off
+log_min_duration_statement = 500
+idle_in_transaction_session_timeout = 60000
+statement_timeout = 30000
+AGENT_MEMORY_DEFAULTS
+		chown postgres:postgres "${AGENT_MEMORY_CONF}"
+		chmod 600 "${AGENT_MEMORY_CONF}"
+	fi
+
+	# Include the agent_memory defaults file from postgresql.conf if not already included
+	if ! grep -q "postgresql.conf.auto.agent_memory" "${POSTGRES_DATA}/postgresql.conf"; then
+		echo "" >> "${POSTGRES_DATA}/postgresql.conf"
+		echo "# Agent Memory profile tuning defaults" >> "${POSTGRES_DATA}/postgresql.conf"
+		echo "include = 'postgresql.conf.auto.agent_memory'" >> "${POSTGRES_DATA}/postgresql.conf"
+	fi
+
 	bashio::log.info "done"
 fi
 
