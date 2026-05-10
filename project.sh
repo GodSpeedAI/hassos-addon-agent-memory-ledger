@@ -2,6 +2,8 @@
 set -e
 
 PLATFORM="linux/arm64"
+IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-ghcr.io/godspeedai/agent-memory-ledger}"
+DEPENDENCY_REPOSITORY="${DEPENDENCY_REPOSITORY:-ghcr.io/godspeedai/agent-memory-ledger/dependency}"
 
 function printInColor() {
 	# Set the color code based on the color name
@@ -41,12 +43,12 @@ function build_dependency() {
 	docker buildx build \
 		--push \
 		--platform "linux/amd64,linux/arm64" \
-		--cache-from "type=registry,ref=ghcr.io/expaso/timescaledb/dependency/${component}:cache" \
-		--cache-to "type=registry,ref=ghcr.io/expaso/timescaledb/dependency/${component}:cache,mode=max" \
-		--tag "ghcr.io/expaso/timescaledb/dependency/${component}:${version}" \
+		--cache-from "type=registry,ref=${DEPENDENCY_REPOSITORY}/${component}:cache" \
+		--cache-to "type=registry,ref=${DEPENDENCY_REPOSITORY}/${component}:cache,mode=max" \
+		--tag "${DEPENDENCY_REPOSITORY}/${component}:${version}" \
 		--progress plain \
 		--build-arg "VERSION=${version}" \
-		--file "./timescaledb/docker-dependencies/${component}" \
+		--file "./agent_memory_ledger/docker-dependencies/${component}" \
 		. &&
 		printInColor "Done building docker image!" "green"
 }
@@ -57,16 +59,16 @@ function build() {
 	printInColor "Building docker image.."
 
 	# Build the image conform the instructions
-	# Push the dev image to docker hub
+	# Push the dev image to GitHub Container Registry
 	# build the image
 	docker buildx build \
 		--platform ${PLATFORM} \
-		--cache-from type=registry,ref=ghcr.io/expaso/timescaledb:cache \
-		--tag ghcr.io/expaso/timescaledb/aarch64:dev \
+		--cache-from type=registry,ref="${IMAGE_REPOSITORY}:cache" \
+		--tag "${IMAGE_REPOSITORY}/aarch64:dev" \
 		--progress plain \
 		--build-arg CACHE_BUST="$(date +%s)" \
 		--output "${output}" \
-		./timescaledb &&
+		./agent_memory_ledger &&
 		printInColor "Done building docker image!" "green"
 
 	#Stop when an error occured
@@ -84,9 +86,9 @@ function run_hassos() {
 	# # Copy the docker image to hassos
 	# printInColor "Pulling docker image on hassos.." "yellow"
 	# # run the docker image pull command remote on Hassos
-	ssh -i ~/.ssh/hassos -l root -p 22222 homeassistant "docker image pull ghcr.io/expaso/timescaledb/aarch64:dev \
-        && ha addons stop  local_timescaledb  \
-        && ha addons start local_timescaledb"
+	ssh -i ~/.ssh/hassos -l root -p 22222 homeassistant "docker image pull ${IMAGE_REPOSITORY}/aarch64:dev \
+        && ha addons stop  local_agent_memory_ledger  \
+        && ha addons start local_agent_memory_ledger"
 	printInColor "Done pulling docker image on hassos!" "green"
 }
 
@@ -95,22 +97,22 @@ function run_local() {
 
 	# Run the docker image locally
 	mkdir -p /tmp/timescale_data
-	docker run --rm --name timescaledb --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 ghcr.io/expaso/timescaledb/aarch64:dev
+	docker run --rm --name agent-memory-ledger --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 "${IMAGE_REPOSITORY}/aarch64:dev"
 }
 
 function release() {
 	local tag=$1
 	printInColor "Releasing docker images: retagging from [latest] with tag ${tag}.."
 
-	#Get all platforms from /timescaledb/config.yaml
-	platforms=$(yq -r '.arch[]' ./timescaledb/config.yaml)
+	#Get all platforms from /agent_memory_ledger/config.yaml
+	platforms=$(yq -r '.arch[]' ./agent_memory_ledger/config.yaml)
 
 	#And loop through them
 	for platform in $platforms; do
 		printInColor "Releasing platform ${platform} with tag ${tag}.."
 
-		docker tag "ghcr.io/expaso/timescaledb/${platform}:latest" "ghcr.io/expaso/timescaledb/${platform}:${tag}"
-		docker push "ghcr.io/expaso/timescaledb/${platform}:${tag}"
+		docker tag "${IMAGE_REPOSITORY}/${platform}:latest" "${IMAGE_REPOSITORY}/${platform}:${tag}"
+		docker push "${IMAGE_REPOSITORY}/${platform}:${tag}"
 	done
 }
 
@@ -120,21 +122,21 @@ function inspect() {
 
 	# Run the docker image locally
 	mkdir -p /tmp/timescale_data
-	docker run --entrypoint "/bin/ash" -it --rm --name timescaledb --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 ghcr.io/expaso/timescaledb/aarch64:dev
+	docker run --entrypoint "/bin/ash" -it --rm --name agent-memory-ledger --platform ${PLATFORM} -v /tmp/timescale_data:/data -p 5432:5432 "${IMAGE_REPOSITORY}/aarch64:dev"
 }
 
 function build_all() {
 	local tag=$1
 	printInColor "Building all platforms for Home Assistant with tag ${tag}"
 
-	# Get all platforms from /timescaledb/config.yaml
-	platforms=$(yq -r '.arch[]' ./timescaledb/config.yaml)
+	# Get all platforms from /agent_memory_ledger/config.yaml
+	platforms=$(yq -r '.arch[]' ./agent_memory_ledger/config.yaml)
 
 	# And loop through them
 	for platform in $platforms; do
 
-		# Get the value from timescaledb/build.yaml by looking it up in the build_from dictionary, whereby the key value of the list is the platform.
-		build_from=$(yq -r ".build_from.${platform}" ./timescaledb/build.yaml)
+		# Get the value from agent_memory_ledger/build.yaml by looking it up in the build_from dictionary, whereby the key value of the list is the platform.
+		build_from=$(yq -r ".build_from.${platform}" ./agent_memory_ledger/build.yaml)
 
 		# Convert the platform to the correct format
 		case $platform in
@@ -146,15 +148,15 @@ function build_all() {
 
 		docker buildx build \
 			--platform "${docker_platform}" \
-			--cache-from type=registry,ref=ghcr.io/expaso/timescaledb:cache \
-			--cache-to type=registry,ref=ghcr.io/expaso/timescaledb:cache,mode=max \
-			--tag "ghcr.io/expaso/timescaledb/${platform}:${tag}" \
+			--cache-from type=registry,ref="${IMAGE_REPOSITORY}:cache" \
+			--cache-to type=registry,ref="${IMAGE_REPOSITORY}:cache,mode=max" \
+			--tag "${IMAGE_REPOSITORY}/${platform}:${tag}" \
 			--build-arg "BUILD_FROM=${build_from}" \
 			--build-arg "BUILD_ARCH=${platform}" \
-			--build-arg "VERSION=${tag}" \
-			--file ./timescaledb/Dockerfile \
+			--build-arg "BUILD_VERSION=${tag}" \
+			--file ./agent_memory_ledger/Dockerfile \
 			--output type=registry,push=true \
-			./timescaledb &&
+			./agent_memory_ledger &&
 			printInColor "Done building docker image!" "green"
 	done
 }

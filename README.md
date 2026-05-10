@@ -315,40 +315,54 @@ to canonical events.
 
 ### Home Assistant Add-on Store
 
-[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fexpaso%2Fhassos-addons)
+[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FGodSpeedAI%2Fhassos-addon-agent-memory-ledger)
 
-Or add this repository URL in the Home Assistant add-on store:
+Or add this repository URL manually in the Home Assistant add-on store:
 
 ```text
-https://github.com/expaso/hassos-addons
+https://github.com/GodSpeedAI/hassos-addon-agent-memory-ledger
 ```
 
-Select the `TimeScaleDb` add-on, install it, start it, and review the add-on
-logs.
+Select the `Agent Memory Ledger` add-on, install it, start it, and review the
+add-on logs.
+
+The add-on currently supports `amd64` and `aarch64`.
 
 ### Standalone Container
 
-You can also run the container on a separate Docker host.
+You can also run the container on a separate Docker host. Docker Hub is not
+required; this project publishes add-on images to GitHub Container Registry.
 
-Pull the image for your architecture:
+After the GHCR workflow has published images, pull the image for your
+architecture:
 
 ```bash
-docker pull ghcr.io/expaso/timescaledb/amd64:stable
-docker pull ghcr.io/expaso/timescaledb/aarch64:stable
-docker pull ghcr.io/expaso/timescaledb/armv7:stable
-docker pull ghcr.io/expaso/timescaledb/armhf:stable
-docker pull ghcr.io/expaso/timescaledb/i386:stable
+docker pull ghcr.io/godspeedai/agent-memory-ledger/amd64:0.1.0
+docker pull ghcr.io/godspeedai/agent-memory-ledger/aarch64:0.1.0
 ```
+
+For local development, build the image from this repository:
+
+```bash
+docker build \
+  --build-arg BUILD_FROM=ghcr.io/hassio-addons/base/amd64:20.1.1 \
+  --build-arg BUILD_ARCH=amd64 \
+  -t agent-memory-ledger:local \
+  agent_memory_ledger
+```
+
+For `aarch64`, use `ghcr.io/hassio-addons/base/aarch64:20.1.1` and
+`BUILD_ARCH=aarch64`.
 
 Run it in the foreground:
 
 ```bash
 docker run \
   --rm \
-  --name timescaledb \
-  -v "${PWD}/timescaledb_addon_data:/data" \
+  --name agent-memory-ledger \
+  -v "${PWD}/agent_memory_ledger_addon_data:/data" \
   -p 5432:5432 \
-  ghcr.io/expaso/timescaledb/amd64:stable
+  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.1.0
 ```
 
 Run it as a daemon:
@@ -356,14 +370,17 @@ Run it as a daemon:
 ```bash
 docker run \
   -d \
-  --name timescaledb \
-  -v "${PWD}/timescaledb_addon_data:/data" \
+  --name agent-memory-ledger \
+  -v "${PWD}/agent_memory_ledger_addon_data:/data" \
   -p 5432:5432 \
-  ghcr.io/expaso/timescaledb/amd64:stable
+  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.1.0
 ```
 
 This maps PostgreSQL port `5432` and stores add-on data in
-`./timescaledb_addon_data`.
+`./agent_memory_ledger_addon_data`.
+
+Use `agent-memory-ledger:local` instead of the GHCR image name when
+running a locally built image.
 
 ## Enabling Agent Memory Ledger
 
@@ -491,18 +508,18 @@ excluding the large PostgreSQL data directory from Home Assistant backups.
 
 Manual backup:
 
-Use `addon_timescaledb_timescaledb` for the Home Assistant add-on container.
-Use `timescaledb` for the standalone container examples above.
+Use `addon_agent_memory_ledger_agent_memory_ledger` for the Home Assistant add-on container.
+Use `agent-memory-ledger` for the standalone container examples above.
 
 ```bash
-docker exec addon_timescaledb_timescaledb \
+docker exec addon_agent_memory_ledger_agent_memory_ledger \
   su - postgres -c "pg_dumpall -U postgres --clean --if-exists -f /data/manual_backup_$(date +%Y%m%d).sql"
 ```
 
 Manual restore:
 
 ```bash
-docker exec addon_timescaledb_timescaledb \
+docker exec addon_agent_memory_ledger_agent_memory_ledger \
   su - postgres -c "psql -U postgres -f /data/manual_backup_YYYYMMDD.sql -d postgres"
 ```
 
@@ -510,27 +527,13 @@ If `include_embeddings_in_backup` is `false`, the `embeddings` schema is
 excluded to reduce backup size. Embeddings can be regenerated from qualified
 memory objects.
 
-## RuVector and pgvector Migration
-
-This add-on uses RuVector for embedding storage. If you previously used
-`pgvector`, automatic migration is disabled by default to prevent data loss.
-
-To migrate:
-
-1. Check all databases for columns using the `vector` type.
-2. Convert dependent columns to `ruvector` manually if needed.
-3. Set `migrate_pgvector_to_ruvector: true`.
-4. Restart the add-on and check logs.
-
-If dependent `vector` columns still exist, migration is aborted.
-
 ## Validation
 
 Run validation inside the container:
 
 ```bash
-/usr/share/timescaledb/validate_agent_memory.sh
-/usr/share/timescaledb/validate_governance.sh
+/usr/share/agent_memory_ledger/validate_agent_memory.sh
+/usr/share/agent_memory_ledger/validate_governance.sh
 ```
 
 The governance validation covers schema presence, identity lifecycle operations,
@@ -585,3 +588,7 @@ under constrained change.
 ```
 
 That principle drives the architecture.
+
+## Acknowledgments
+
+We would like to thank [Expaso](https://github.com/expaso/hassos-addon-timescaledb) for the initial PostgreSQL and TimescaleDB add-on foundation, which we have heavily modified and extended for the Agent Memory Ledger.

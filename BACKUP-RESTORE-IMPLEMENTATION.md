@@ -6,13 +6,13 @@ This implementation adds a resilient backup and restore mechanism for the Timesc
 
 ## Changes Made
 
-### 1. Configuration (`timescaledb/config.yaml`)
+### 1. Configuration (`agent_memory_ledger/config.yaml`)
 
 Added Home Assistant backup lifecycle hooks:
 
 ```yaml
-backup_pre: /usr/share/timescaledb/backup_pre.sh
-backup_post: /usr/share/timescaledb/backup_post.sh
+backup_pre: /usr/share/agent_memory_ledger/backup_pre.sh
+backup_post: /usr/share/agent_memory_ledger/backup_post.sh
 backup_exclude:
   - /data/postgres/*
 ```
@@ -25,7 +25,7 @@ These hooks ensure that:
 
 ### 2. Pre-Backup Script (`backup_pre.sh`)
 
-**Location:** `/usr/share/timescaledb/backup_pre.sh`
+**Location:** `/usr/share/agent_memory_ledger/backup_pre.sh`
 
 **Functionality:**
 
@@ -45,7 +45,7 @@ These hooks ensure that:
 
 ### 3. Post-Backup Script (`backup_post.sh`)
 
-**Location:** `/usr/share/timescaledb/backup_post.sh`
+**Location:** `/usr/share/agent_memory_ledger/backup_post.sh`
 
 **Functionality:**
 
@@ -55,7 +55,7 @@ These hooks ensure that:
 
 ### 4. Restore Script (`restore_from_backup.sh`)
 
-**Location:** `/usr/share/timescaledb/restore_from_backup.sh`
+**Location:** `/usr/share/agent_memory_ledger/restore_from_backup.sh`
 
 **Functionality:**
 
@@ -106,9 +106,9 @@ These hooks ensure that:
 Added execution permissions for the new scripts:
 
 ```dockerfile
-RUN chmod +x /usr/share/timescaledb/backup_pre.sh \
-    && chmod +x /usr/share/timescaledb/backup_post.sh \
-    && chmod +x /usr/share/timescaledb/restore_from_backup.sh
+RUN chmod +x /usr/share/agent_memory_ledger/backup_pre.sh \
+    && chmod +x /usr/share/agent_memory_ledger/backup_post.sh \
+    && chmod +x /usr/share/agent_memory_ledger/restore_from_backup.sh
 ```
 
 ### 7. Documentation (`README.md`)

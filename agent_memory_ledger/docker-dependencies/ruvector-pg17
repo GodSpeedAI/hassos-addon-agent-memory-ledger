@@ -1,0 +1,54 @@
+FROM timescale/timescaledb:latest-pg17 AS timescale-pg17
+
+FROM timescale-pg17 AS ruvector
+ARG VERSION
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+# --------------------------------------------
+# RuVector-Postgres - build and install
+# Vector search with GNN layers, SQL functions, and SIMD acceleration.
+# --------------------------------------------
+# hadolint ignore=DL3018, DL3003
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    --mount=type=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
+    --mount=type=cargo-build-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/build/target \
+    set -ex \
+    && apk update \
+    && apk add --virtual .fetch-deps \
+                ca-certificates \
+                git \
+                openssl \
+                openssl-dev \
+                tar \
+                wget \
+                curl \
+    && apk add --virtual .build-deps \
+                coreutils \
+                gcc \
+                make \
+                cmake \
+                build-base \
+                clang19 \
+                llvm19 \
+                musl-dev \
+                pkgconf \
+    && if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ]; then \
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable \
+            && export PATH="/root/.cargo/bin:${PATH}" \
+            && cargo install --version '0.12.9' --locked --force cargo-pgrx \
+            && cargo pgrx init --pg17 /usr/local/bin/pg_config \
+            && mkdir -p /build \
+            && cd /build \
+            && git clone https://github.com/ruvnet/RuVector.git . \
+            && git checkout ${VERSION} \
+            && cd crates/ruvector-postgres \
+            && cargo pgrx install --release --pg-version pg17 --features "index-all"; \
+       fi \
+    && cd ~ \
+    && apk del .fetch-deps .build-deps \
+    && rm -rf /build /root/.cargo /root/.rustup
+
+# Labels
+LABEL \
+    org.opencontainers.image.source="https://github.com/GodSpeedAI/hassos-addon-agent-memory-ledger"

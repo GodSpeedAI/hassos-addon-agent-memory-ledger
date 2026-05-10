@@ -1,206 +1,468 @@
-# Agent Guidelines for Home Assistant TimescaleDB Addon Development
+# Agent Operating Contract for Home Assistant Agent Memory Ledger Addon Development
 
-## Overview
+## Project-Specific Authority
 
-This document provides guidelines for AI coding agents working on this Home Assistant addon. Following these guidelines ensures consistent, maintainable, and high-quality code.
+When analyzing this project or generating code, agents MUST check for and prioritize `.github/copilot-instructions.md` when that file exists.
 
-## Code Quality Standards
+That file contains project-level rules, architecture details, and preferred coding standards that supersede general knowledge and this document where they conflict.
 
-### General Principles
+## Governed Autonomous Infrastructure
 
-- **Write clean, readable code**: Prioritize clarity over cleverness
-- **Follow existing patterns**: Match the style and structure of the existing codebase
-- **Document your changes**: Add comments for complex logic, especially in shell scripts
-- **Test thoroughly**: Verify changes work in the Home Assistant addon environment
-- **Keep it simple**: Avoid unnecessary complexity or over-engineering
+This repository implements infrastructure for governed autonomous systems. It is not a generic CRUD application, a traditional AI wrapper, or merely a vector database extension.
 
-### Shell Script Best Practices
+The system models:
 
-- Use `#!/usr/bin/with-contenv bashio` for addon scripts that need Home Assistant integration
-- Always quote variables: `"${variable}"` instead of `$variable`
-- Use `bashio::log.*` functions for logging (info, warning, error, debug)
-- Check return codes and handle errors gracefully
-- Use meaningful variable names in ALL_CAPS for constants
-- Add comments explaining non-obvious logic
+- governed autonomous actions
+- append-only event history
+- replayable governance state
+- identity lineage
+- qualified memory promotion
+- causal auditability
+- semantic continuity
+- temporal reconstruction
 
-### Docker Best Practices
+Agents working in this repository MUST preserve these architectural invariants.
 
-- Minimize layer count in Dockerfile
-- Clean up package manager caches after installations
-- Use specific version pins where stability is critical
-- Document why specific versions are chosen
-- Follow multi-stage build patterns when applicable
+## Core Philosophy
 
-## Project Structure Understanding
+The system treats autonomous activity as governed state evolution.
+
+The most important architectural principle is:
+
+```text
+canonical_history != derived_state
+```
+
+Raw events are canonical. Embeddings, summaries, dashboards, audit projections, and other read models are derived.
+
+Agents MUST NEVER collapse canonical history into derived artifacts.
+
+## Architectural Priorities
+
+When making implementation decisions, optimize in this order:
+
+1. correctness
+2. replayability
+3. provenance
+4. append-only integrity
+5. governance traceability
+6. causal reconstruction
+7. auditability
+8. semantic consistency
+9. operational simplicity
+10. performance
+
+Performance optimizations MUST NOT compromise replayability or auditability.
+
+## Repository Purpose
+
+This repository provides:
+
+- PostgreSQL infrastructure
+- TimescaleDB temporal scaling
+- RuVector semantic retrieval
+- governed identity lifecycle management
+- governed action admission ledgers
+- append-only event persistence
+- replayable governance primitives
+- inbox/outbox broker interoperability
+- qualified memory lifecycle storage
+- audit projection infrastructure
+
+The repository is intended to support:
+
+- AI coding agents
+- MCP ecosystems
+- Home Assistant automations
+- local-first autonomous systems
+- distributed agent workflows
+- semantic runtime infrastructure
+
+This repository is not a full orchestration engine, a generalized AI framework, a replacement for Home Assistant, a centralized policy engine, a distributed consensus layer, or a generic graph database. Avoid introducing orchestration complexity unless the requirement explicitly needs it.
+
+## Canonical System Concepts
+
+### Events
+
+Events are immutable canonical facts. Examples include tool invocations, file mutation requests, command executions, memory promotions, policy decisions, identity creations, identity merges, and role bindings.
+
+Events MUST be append-only.
+
+Agents MUST NOT:
+
+- overwrite historical events
+- silently mutate event meaning
+- repurpose old events
+- destroy provenance chains
+- delete canonical events
+
+### Governance
+
+Governance means:
+
+```text
+A transition is only valid if admitted
+under the active governance context.
+```
+
+Governance decisions MUST preserve:
+
+- policy version
+- acting identity
+- lineage context
+- timestamps
+- provenance
+- admission decision
+- causal references
+
+Agents MUST NOT create hidden governance state or silent policy overrides.
+
+### Identity
+
+Identity is governed state. Identities may be created, retired, merged, split, aliased, reclassified, or delegated.
+
+Identity continuity is preserved through lineage. Agents MUST preserve lineage integrity and reject lineage cycles.
+
+Invalid lineage example:
+
+```text
+A -> B -> C -> A
+```
+
+Identity operations MUST preserve provenance, lineage traceability, governance replayability, and causal consistency.
+
+### Replayability
+
+Replayability is a primary invariant.
+
+The system must be able to reconstruct:
+
+- what happened
+- who acted
+- which policy governed the action
+- why the action was accepted or rejected
+- what identity lineage existed
+- what causal chain preceded the action
+
+Agents MUST prefer replayable explicit state over hidden implicit logic.
+
+## Database Principles
+
+### Append-Only Philosophy
+
+Historical records should be immutable whenever possible.
+
+Preferred patterns:
+
+- append-only event tables
+- immutable governance records
+- temporal validity ranges
+- supersession instead of mutation
+- event sourcing patterns
+- explicit lifecycle transitions
+
+Avoid:
+
+- destructive updates
+- silent deletes
+- history rewriting
+- implicit state mutation
+- mutable audit history
+
+### Raw Events vs Memory
+
+Raw events are observations. Memory is governed promotion.
+
+Memory lifecycle:
+
+```text
+observed
+-> candidate
+-> accepted
+-> verified
+-> superseded / rejected / expired
+```
+
+Agents MUST preserve the separation between:
+
+```text
+what happened
+```
+
+and:
+
+```text
+what the system chooses to remember
+```
+
+### Embeddings
+
+Embeddings are derived retrieval artifacts.
+
+Embeddings MUST:
+
+- link to qualified memory objects
+- preserve provenance linkage
+- remain regenerable
+- never replace canonical history
+
+Agents MUST NOT treat embeddings as canonical truth, store raw historical state only in embeddings, or collapse provenance into vector summaries.
+
+### Policy Records
+
+Policy decisions MUST remain replayable.
+
+Every accepted or rejected action should reference:
+
+- policy version
+- request payload
+- actor identity
+- admission context
+- timestamps
+- provenance metadata
+
+## Inbox and Outbox Principles
+
+The system is broker-compatible but broker-agnostic. Supported targets may include RabbitMQ, NATS, Redis Streams, Kafka, and future event transports.
+
+Agents MUST preserve:
+
+- idempotency
+- replay safety
+- delivery traceability
+- immutable event IDs
+
+Transport implementations MUST NOT redefine event semantics.
+
+## Schema Evolution Rules
+
+Schema evolution should be additive first, backward compatible where practical, replay-safe, migration-safe, and provenance-preserving.
+
+Preferred strategy:
+
+```text
+add new structures
+migrate gradually
+deprecate later
+remove only with explicit migration guarantees
+```
+
+Agents SHOULD prefer:
+
+- idempotent migrations
+- additive schema evolution
+- explicit provenance
+- JSONB extensibility
+- Timescale hypertables for temporal data
+- immutable audit trails
+- foreign key integrity
+- deterministic replay behavior
+- explicit lifecycle state transitions
+- schema versioning
+
+Agents MUST avoid:
+
+- `DROP ... CASCADE` without explicit justification
+- destructive migrations
+- hidden side effects
+- orphaned lineage edges
+- embedding-only storage
+- non-versioned governance logic
+- conflating memory with observations
+- irreversible transforms without provenance
+
+## PostgreSQL and TimescaleDB Guidance
+
+- Use Timescale hypertables for large temporal streams.
+- Use appropriate indexes for temporal, identity, policy, and replay paths.
+- Use JSONB GIN indexes where justified.
+- Preserve append-only write efficiency.
+- Avoid pathological joins on replay paths.
+- Document performance tradeoffs when they affect governance, replay, or audit behavior.
+- Install extensions in initialization scripts.
+- Use `CREATE EXTENSION IF NOT EXISTS` to keep setup idempotent.
+- Check compatibility with the PostgreSQL and TimescaleDB versions in the addon.
+- Document version-specific requirements.
+- Use `timescaledb-tune` for automatic configuration when appropriate.
+- Keep memory settings compatible with container limits and Home Assistant resource constraints.
+
+Correctness is more important than premature optimization.
+
+## Home Assistant Addon Standards
+
+This repository is also a Home Assistant addon. Preserve addon conventions while implementing governed infrastructure.
 
 ### Key Components
 
-1. **timescaledb/**: Main addon directory
-   - `config.yaml`: Addon configuration (options, schema, ports)
-   - `Dockerfile`: Container build instructions
-   - `build.yaml`: Build configuration for different architectures
+1. `agent_memory_ledger/`
+   - `config.yaml`: addon configuration, options, schema, and ports
+   - `Dockerfile`: container build instructions
+   - `build.yaml`: build configuration for supported architectures
 
-2. **rootfs/**: Container root filesystem overlay
-   - `etc/s6-overlay/s6-rc.d/`: Service definitions using s6-overlay
-   - `usr/share/timescaledb/`: Initialization scripts
+2. `rootfs/`
+   - `etc/s6-overlay/s6-rc.d/`: service definitions using s6-overlay
+   - `usr/share/agent_memory_ledger/`: initialization scripts
 
-3. **docker-dependencies/**: Pre-built extension binaries
+3. `docker-dependencies/`
+   - pre-built extension binaries
 
-### Service Management (s6-overlay)
+### Shell Script Standards
 
-- Each service has its own directory under `s6-rc.d/`
-- Required files: `type`, `run`, and optionally `finish`
-- Use `dependencies.d/` to control service startup order
-- Services should be resilient and handle failures gracefully
+- Use `#!/usr/bin/with-contenv bashio` for addon scripts that need Home Assistant integration.
+- Always quote variables: `"${variable}"` instead of `$variable`.
+- Use `bashio::log.*` functions for logging.
+- Check return codes and handle errors gracefully.
+- Use meaningful `ALL_CAPS` names for constants.
+- Add comments only for non-obvious logic.
 
-## Home Assistant Addon Documentation
+### Docker Standards
 
-### Essential Resources
+- Minimize unnecessary layers.
+- Clean package manager caches after installation.
+- Use version pins where stability is critical.
+- Document why specific versions are chosen.
+- Follow multi-stage build patterns when applicable.
 
-- **Official Addon Documentation**: https://developers.home-assistant.io/docs/add-ons
-- **Addon Configuration**: https://developers.home-assistant.io/docs/add-ons/configuration
-- **Bashio Library**: https://github.com/hassio-addons/bashio (for interacting with Home Assistant)
-- **s6-overlay**: https://github.com/just-containers/s6-overlay (service supervision)
+### Service Management
 
-### Key Addon Concepts
+- Each service has its own directory under `s6-rc.d/`.
+- Required service files are `type` and `run`; `finish` is optional.
+- Use `dependencies.d/` to control service startup order.
+- Services should handle failure and restart behavior deliberately.
 
-#### Configuration (`config.yaml`)
+### Addon Configuration
+
+Configuration belongs in `config.yaml`:
 
 ```yaml
-options: # User-configurable options
+options:
   key: value
-schema: # Validation schema for options
+schema:
   key: type
 ```
 
-#### Reading Configuration in Scripts
+Read configuration with bashio:
 
 ```bash
 #!/usr/bin/with-contenv bashio
 
-# Read option value
 VALUE=$(bashio::config 'option_name')
 
-# Check if option exists
 if bashio::config.exists 'option_name'; then
-    # Option is set
+    bashio::log.info "Option is set"
 fi
 
-# Get with default value
 VALUE=$(bashio::config 'option_name' 'default_value')
 ```
 
-#### Logging
+Use bashio logging:
 
 ```bash
 bashio::log.info "Informational message"
 bashio::log.warning "Warning message"
 bashio::log.error "Error message"
-bashio::log.debug "Debug message (only shown in debug mode)"
+bashio::log.debug "Debug message"
 ```
-
-#### Service Scripts
-
-- **run**: Main service execution script (should not exit unless service stops)
-- **finish**: Cleanup script (runs when service stops)
-- **type**: Service type (usually `longrun` for daemons)
 
 ## Development Workflow
 
 ### Planning
 
-1. **Understand the requirement**: Read the issue/request carefully
-2. **Review existing code**: Check how similar features are implemented
-3. **Plan your approach**: Think through the changes before coding
-4. **Stick to the plan**: Don't introduce unrelated changes
+1. Read the requirement carefully.
+2. Check `.github/copilot-instructions.md` if it exists.
+3. Review existing code for similar patterns.
+4. Identify replayability, provenance, lineage, policy, and audit implications.
+5. Plan focused changes and avoid unrelated edits.
 
 ### Implementation
 
-1. **Make focused changes**: One feature or fix per commit/PR
-2. **Preserve working functionality**: Don't break existing features
-3. **Follow the existing architecture**: Use established patterns
-4. **Add appropriate logging**: Help users debug issues
-5. **Update documentation**: Modify README.md if user-facing changes are made
+1. Make one coherent feature or fix per change set.
+2. Preserve working addon behavior.
+3. Follow existing architecture and service patterns.
+4. Prefer additive, replay-safe changes.
+5. Add logging that helps operators debug without leaking secrets.
+6. Update user-facing documentation when behavior or configuration changes.
 
-### Testing Considerations
+### Testing
 
-- Test initialization scripts handle both fresh installs and upgrades
-- Verify configuration options are properly validated
-- Check that services start and stop cleanly
-- Ensure PostgreSQL extensions load correctly
-- Test across different architectures if possible (amd64, aarch64, armv7)
+Test initialization scripts for fresh installs and upgrades. Verify configuration options, service startup and shutdown, PostgreSQL extension loading, and supported architectures where practical.
 
-## PostgreSQL & TimescaleDB Specifics
+Changes affecting governance or canonical history MUST include validation for:
 
-### Extension Management
+- replayability
+- append-only guarantees
+- lineage integrity
+- identity validity
+- policy linkage
+- provenance preservation
+- idempotency
+- duplicate rejection
+- migration safety
 
-- Extensions are installed in initialization scripts
-- Use `CREATE EXTENSION IF NOT EXISTS` to avoid errors
-- Check compatibility with PostgreSQL version
-- Document any version-specific requirements
+Important replay tests include:
 
-### Configuration Tuning
+- reconstruct identity at time T
+- reconstruct active policy at time T
+- replay action admission decisions
+- verify the lineage graph remains acyclic
 
-- `timescaledb-tune` is used for automatic configuration
-- Custom settings can be added via `postgresql.conf.auto` or similar
-- Memory settings should respect container limits
-- Consider Home Assistant's resource constraints
+## Documentation Standards
 
-## Common Pitfalls to Avoid
+Documentation should explain:
 
-❌ **Don't:**
+- what invariant exists
+- why it exists
+- what breaks if it is violated
+- replay implications
+- governance implications
+- provenance guarantees
+- tradeoffs
+- operational constraints
 
-- Hardcode paths that should be configurable
-- Ignore errors or return codes
-- Make breaking changes to configuration schema without migration
-- Assume specific PostgreSQL versions without checking
-- Leave debug code or commented-out blocks
-- Use `echo` for logging (use `bashio::log.*` instead)
-- Break backward compatibility without documenting
-
-✅ **Do:**
-
-- Validate user input from configuration
-- Provide sensible defaults
-- Handle edge cases (missing files, permissions, etc.)
-- Use appropriate exit codes
-- Keep services idempotent where possible
-- Document environment variables and their purposes
+Avoid shallow marketing language.
 
 ## Code Review Checklist
 
-Before completing your work, verify:
+Before completing work, verify:
 
-- [ ] Code follows existing style and patterns
-- [ ] All shell scripts have proper shebangs
-- [ ] Variables are properly quoted
-- [ ] Error handling is in place
-- [ ] Logging uses bashio functions
-- [ ] Configuration changes are reflected in `config.yaml` schema
-- [ ] Services have proper dependencies defined
-- [ ] Documentation is updated if needed
-- [ ] No hardcoded values that should be configurable
-- [ ] Changes are tested or testable
+- [ ] `.github/copilot-instructions.md` was checked if present
+- [ ] code follows existing style and patterns
+- [ ] shell scripts have proper shebangs
+- [ ] variables are properly quoted
+- [ ] error handling is in place
+- [ ] logging uses bashio functions
+- [ ] configuration changes are reflected in `config.yaml` schema
+- [ ] services have proper dependencies defined
+- [ ] documentation is updated if needed
+- [ ] no hardcoded values should be configurable
+- [ ] changes are tested or testable
+- [ ] canonical history remains separate from derived state
+- [ ] governance decisions remain replayable
+- [ ] provenance links are preserved
+- [ ] identity lineage remains acyclic
+- [ ] migrations are additive or explicitly justified
+- [ ] canonical events are not deleted or rewritten
 
 ## Getting Help
 
 When stuck:
 
-1. Review existing code for similar patterns
-2. Check Home Assistant addon documentation
-3. Examine bashio library capabilities
-4. Look at PostgreSQL/TimescaleDB documentation
-5. Ask specific questions about the architecture or requirements
+1. Review existing code for similar patterns.
+2. Check Home Assistant addon documentation.
+3. Examine bashio library capabilities.
+4. Check PostgreSQL, TimescaleDB, and RuVector documentation.
+5. Trace the governance, identity, replay, and provenance invariants affected by the change.
+6. Ask specific questions about the architecture or requirement.
 
-## Summary
+## Guiding Principle
 
-**Core Principles:**
+```text
+Robust autonomous systems preserve:
+identity,
+causality,
+replayability,
+and provenance
+under constrained change.
+```
 
-- 📝 Write clean, documented code
-- 🎯 Stick to the plan and scope
-- 🏗️ Follow existing patterns
-- 🔍 Test thoroughly
-- 📚 Document changes
-- 🤝 Respect Home Assistant addon conventions
-
-Your work contributes to a critical infrastructure component for Home Assistant users. Quality and reliability are paramount.
+All implementation decisions should be evaluated against that principle while preserving Home Assistant addon reliability and conventions.

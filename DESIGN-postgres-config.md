@@ -134,7 +134,7 @@ pg_hba_config:
 #### File Structure
 
 ```
-timescaledb/
+agent_memory_ledger/
 ├── config.yaml                              # Updated with new schema
 └── rootfs/
     ├── etc/
@@ -144,7 +144,7 @@ timescaledb/
     │               └── run                  # Updated to call helper script
     └── usr/
         └── share/
-            └── timescaledb/
+            └── agent_memory_ledger/
                 ├── 000_install_timescaledb.sh
                 ├── 001_reenable_auth.sh
                 ├── 002_timescaledb_tune.sh
@@ -176,7 +176,7 @@ The configuration application will occur at the end of `init-addon/run`, after:
 # Apply user configuration overrides
 if bashio::config.has_value 'postgresql_config' || bashio::config.has_value 'pg_hba_config'; then
     bashio::log.info "Applying user configuration overrides.."
-    /usr/share/timescaledb/003_apply_user_config.sh
+    /usr/share/agent_memory_ledger/003_apply_user_config.sh
     bashio::log.info "done"
 fi
 ```
