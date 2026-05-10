@@ -328,6 +328,22 @@ add-on logs.
 
 The add-on currently supports `amd64` and `aarch64`.
 
+The architecture images must be public in GHCR before Home Assistant can install the add-on.
+Supervisor pulls:
+
+```text
+ghcr.io/godspeedai/agent-memory-ledger/amd64:<version>
+ghcr.io/godspeedai/agent-memory-ledger/aarch64:<version>
+```
+
+If installation fails with `error from registry: denied`, the image tag is
+missing or the GHCR package is private. Publish the release images with the
+Deploy workflow, then make the `agent-memory-ledger/amd64` and
+`agent-memory-ledger/aarch64` packages public in the GodSpeedAI organization
+package settings. GHCR public container images can be pulled anonymously, which
+is required because Home Assistant Supervisor does not authenticate to this
+project's private package registry during add-on installation.
+
 ### Standalone Container
 
 You can also run the container on a separate Docker host. Docker Hub is not

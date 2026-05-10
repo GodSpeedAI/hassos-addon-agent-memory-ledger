@@ -80,3 +80,18 @@ jobs:
             BUILD_REPOSITORY=${{ github.repository }}
           tags: |
             ghcr.io/godspeedai/agent-memory-ledger/${{ matrix.arch }}:${{ steps.addon.outputs.version }}
+
+      - name: Verify anonymous image pull
+        shell: bash
+        run: |
+          image="ghcr.io/godspeedai/agent-memory-ledger/${{ matrix.arch }}:${{ steps.addon.outputs.version }}"
+          docker logout ghcr.io || true
+          if ! docker manifest inspect "${image}" >/dev/null; then
+            printf '%s\n' \
+              "Published image is not anonymously pullable: ${image}" \
+              "" \
+              "Home Assistant installs this add-on by pulling the image from GHCR." \
+              "Make the package public in the GodSpeedAI organization package" \
+              "settings, then rerun this workflow." >&2
+            exit 1
+          fi

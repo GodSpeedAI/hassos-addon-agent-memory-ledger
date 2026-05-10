@@ -11,8 +11,8 @@ ARG TARGETVARIANT
 # --------------------------------------------
 # hadolint ignore=DL3018, DL3003
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    --mount=type=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
-    --mount=type=cargo-build-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/build/target \
+    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
+    --mount=type=cache,id=cargo-build-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/build/target \
     set -ex \
     && apk update \
     && apk add --virtual .fetch-deps \

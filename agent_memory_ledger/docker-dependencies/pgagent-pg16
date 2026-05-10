@@ -32,7 +32,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     && cd /build/pgagent \
     && git checkout ${VERSION} \
 && git apply -v ../pgagent.patch \
-    && cmake . \
+    && cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 . \
     && make && make install \
     && cd ~ \
     && apk del .fetch-deps .build-deps \
