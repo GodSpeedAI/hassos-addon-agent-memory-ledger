@@ -87,11 +87,19 @@ upgradeTimeScaleExtension () {
 			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb_toolkit UPDATE;" || true)
 		)
 
-		# Update Vector extension when needed
+		# Update RuVector extension when needed
+		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'ruvector';" | grep -q 1 \
+		&& (
+			bashio::log.info "Try updating RuVector Extension for database: '${datname}'.."; \
+			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION ruvector UPDATE;" || true)
+		)
+
+		# Migrate legacy pgvector to ruvector if present
 		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'vector';" | grep -q 1 \
 		&& (
-			bashio::log.info "Try updating Vector Extension for database: '${datname}'.."; \
-			(psql -X -U postgres -d ${datname} -c "ALTER EXTENSION vector UPDATE;" || true)
+			bashio::log.info "Migrating legacy pgvector to ruvector for database: '${datname}'.."; \
+			(psql -X -U postgres -d ${datname} -c "DROP EXTENSION IF EXISTS vector CASCADE;" || true) \
+			&& (psql -X -U postgres -d ${datname} -c "CREATE EXTENSION IF NOT EXISTS ruvector;" || true)
 		)
 
 	done

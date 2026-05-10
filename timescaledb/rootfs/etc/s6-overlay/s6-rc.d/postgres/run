@@ -67,10 +67,16 @@ if bashio::var.true "${UPDATE}"; then
 		&& bashio::log.info "Try updating TimescaleDb Toolkit Extension for database: '${datname}'.." \
 		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION timescaledb_toolkit UPDATE;" || true >> /var/log/timescaledb_toolkit.upgrade.log
 
-		# Update Vector extension when needed
+		# Update RuVector extension when needed
+		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'ruvector';" | grep -q 1 \
+		&& bashio::log.info "Try updating RuVector Extension for database: '${datname}'.." \
+		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION ruvector UPDATE;" || true >> /var/log/ruvector.upgrade.log
+
+		# Also handle legacy pgvector extension (for migration)
 		psql -X -U postgres -d ${datname} -c "select 1 from pg_extension where extname = 'vector';" | grep -q 1 \
-		&& bashio::log.info "Try updating Vector Extension for database: '${datname}'.." \
-		&& psql -X -U postgres -d ${datname} -c "ALTER EXTENSION vector UPDATE;" || true >> /var/log/vector.upgrade.log
+		&& bashio::log.info "Legacy pgvector extension found in database: '${datname}'. Migrating to ruvector.." \
+		&& psql -X -U postgres -d ${datname} -c "DROP EXTENSION IF EXISTS vector CASCADE;" || true \
+		&& psql -X -U postgres -d ${datname} -c "CREATE EXTENSION IF NOT EXISTS ruvector;" || true >> /var/log/ruvector.migration.log
 
 	done
 fi
