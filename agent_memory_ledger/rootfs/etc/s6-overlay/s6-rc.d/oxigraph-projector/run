@@ -1,0 +1,22 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Oxigraph Projection Worker Service
+# Runs the periodic RDF projection from Postgres to Oxigraph.
+# Only active when oxigraph.enabled=true AND agent_memory.enabled=true.
+# ==============================================================================
+
+# Check if Oxigraph is enabled
+if ! bashio::config.true 'oxigraph.enabled'; then
+    bashio::log.info "Oxigraph projector: disabled. Not starting."
+    exec sleep infinity
+fi
+
+# Oxigraph requires agent_memory
+if ! bashio::config.true 'agent_memory.enabled'; then
+    bashio::log.warning "Oxigraph projector: agent_memory not enabled. Not starting."
+    exec sleep infinity
+fi
+
+# Run the projection worker
+exec /usr/share/agent_memory_ledger/oxigraph_project.sh

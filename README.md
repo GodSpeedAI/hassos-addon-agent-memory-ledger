@@ -15,6 +15,7 @@ It provides:
 - audit-grade provenance
 - broker-ready inbox/outbox tables
 - temporal and causal reconstruction primitives
+- optional RDF/SPARQL semantic graph projections via Oxigraph
 
 The project is designed for:
 
@@ -41,6 +42,7 @@ This add-on builds on:
 | PostGIS | Geospatial extension support |
 | TimescaleDB Toolkit | Time-series analysis helpers |
 | pgAgent | PostgreSQL job scheduling |
+| Oxigraph | Optional RDF/SPARQL semantic graph projection |
 
 It can still be used as a general PostgreSQL + TimescaleDB add-on for Home
 Assistant recorder data, Grafana dashboards, monitoring, and SQL-based
@@ -122,6 +124,7 @@ distributed workflows.
 | Replay Layer | Governance reconstruction at a point in time |
 | Audit Projections | Derived evidence views linked to source events |
 | Inbox/Outbox Layer | Broker interoperability and retry-safe delivery |
+| Oxigraph Projection | Optional RDF/SPARQL semantic graph layer |
 
 The system is an append-only temporal graph of governed transitions. Core
 entities include agents, humans, services, tools, resources, workspaces,
@@ -141,7 +144,7 @@ database by default.
 | `memory` | Qualified memory lifecycle |
 | `embeddings` | RuVector embedding storage |
 | `governance` | Identity, policy, action, lineage, and replay state |
-| `kg` | Optional graph/semantic projections |
+| `kg` | Oxigraph projection state tracking |
 | `audit` | Optional derived audit projections |
 
 The currently provisioned schema files focus on `event_log`, `memory`,
@@ -555,6 +558,289 @@ Run validation inside the container:
 The governance validation covers schema presence, identity lifecycle operations,
 lineage cycle rejection, append-only protections, policy replay lookup,
 accepted/rejected action requests, and audit projection generation.
+
+## Oxigraph Semantic Graph Projection
+
+### What Oxigraph Is
+
+Oxigraph is a rebuildable semantic graph projection over canonical Postgres
+history. It is used for SPARQL queries, identity lineage traversal, governance
+provenance, and semantic overlays.
+
+**Oxigraph is not the source of truth.** Postgres remains canonical.
+
+### Architecture
+
+```text
+Postgres (canonical) --> Projection Worker --> Oxigraph (derived RDF)
+```
+
+The projection is:
+
+- **one-directional**: Postgres to Oxigraph only, never the reverse
+- **rebuildable**: Oxigraph data can be destroyed and fully reconstructed from
+  Postgres
+- **optional**: the add-on works normally when Oxigraph is disabled
+- **off the hot path**: projection runs periodically, not on every write
+- **configurable**: you choose which categories of data to project
+
+### What Gets Projected
+
+| Category | Default | Contents |
+| --- | --- | --- |
+| Identity lineage | on | identities, lineage edges, role bindings |
+| Governance | on | action requests, decisions, policy references |
+| Memory | on | memory items, status, embedding existence |
+| Raw events | off | event metadata only (never full JSON payloads) |
+
+### Enabling Oxigraph
+
+Oxigraph requires `agent_memory.enabled=true`. Add the Oxigraph configuration
+to the add-on options:
+
+```yaml
+agent_memory:
+  enabled: true
+
+oxigraph:
+  enabled: true
+  bind: 127.0.0.1
+  port: 7878
+  expose_port: false
+  project_governance: true
+  project_identity_lineage: true
+  project_memory: true
+  project_raw_events: false
+  rebuild_on_start: false
+  batch_size: 500
+  max_projection_interval_seconds: 60
+```
+
+Options:
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `enabled` | `false` | Enables the Oxigraph SPARQL service |
+| `data_dir` | `/data/oxigraph` | Persistent storage path for Oxigraph/RocksDB |
+| `bind` | `127.0.0.1` | Network interface (localhost = internal only) |
+| `port` | `7878` | SPARQL endpoint TCP port |
+| `expose_port` | `false` | Expose port outside the add-on network |
+| `log_level` | `info` | Oxigraph server log verbosity |
+| `project_governance` | `true` | Project action requests and decisions |
+| `project_identity_lineage` | `true` | Project identities, lineage, and roles |
+| `project_memory` | `true` | Project memory items and lifecycle |
+| `project_raw_events` | `false` | Project raw event metadata (not payloads) |
+| `rebuild_on_start` | `false` | Clear and rebuild Oxigraph on add-on start |
+| `batch_size` | `500` | Records per projection batch |
+| `max_projection_interval_seconds` | `60` | Seconds between projection cycles |
+
+### RDF Vocabulary
+
+The projection uses a small internal vocabulary with stable prefixes:
+
+| Prefix | IRI |
+| --- | --- |
+| `aml:` | `http://agent-memory-ledger.local/ontology#` |
+| `id:` | `http://agent-memory-ledger.local/identity/` |
+| `evt:` | `http://agent-memory-ledger.local/event/` |
+| `act:` | `http://agent-memory-ledger.local/action/` |
+| `mem:` | `http://agent-memory-ledger.local/memory/` |
+| `pol:` | `http://agent-memory-ledger.local/policy/` |
+
+Key predicates:
+
+| Predicate | Purpose |
+| --- | --- |
+| `aml:hasType` | Resource type (identity, action_request, memory_item, agent_event) |
+| `aml:hasStatus` | Current status |
+| `aml:createdAt` | Creation timestamp (xsd:dateTime) |
+| `aml:retiredAt` | Retirement timestamp (xsd:dateTime) |
+| `aml:actedBy` | Acting identity reference |
+| `aml:requestedAction` | Action type |
+| `aml:targetResource` | Target resource |
+| `aml:governedByPolicy` | Policy version reference |
+| `aml:decision` | Admission decision |
+| `aml:decisionReason` | Decision explanation |
+| `aml:parentIdentity` | Lineage parent |
+| `aml:childIdentity` | Lineage child |
+| `aml:lineageType` | Lineage relationship type |
+| `aml:boundToRole` | Role binding |
+| `aml:sourceEvent` | Source event reference |
+| `aml:hasMemoryStatus` | Memory lifecycle status |
+| `aml:hasEmbedding` | Whether embedding exists (true/false) |
+| `aml:observedAt` | Observation timestamp |
+
+UUIDs are represented as stable IRIs (not blank nodes). Timestamps use
+`xsd:dateTime`.
+
+### Example SPARQL Queries
+
+#### Identity Lineage for an Identity
+
+```sparql
+PREFIX aml: <http://agent-memory-ledger.local/ontology#>
+PREFIX id: <http://agent-memory-ledger.local/identity/>
+SELECT ?child ?lineageType WHERE {
+    id:<IDENTITY_UUID> aml:parentIdentity ?child .
+    ?child aml:lineageType ?lineageType .
+}
+```
+
+#### All Actions by an Agent
+
+```sparql
+PREFIX aml: <http://agent-memory-ledger.local/ontology#>
+PREFIX id: <http://agent-memory-ledger.local/identity/>
+SELECT ?action ?type ?decision ?time WHERE {
+    ?action aml:actedBy id:<IDENTITY_UUID> ;
+            aml:requestedAction ?type ;
+            aml:decision ?decision ;
+            aml:observedAt ?time .
+}
+ORDER BY DESC(?time)
+```
+
+#### Rejected Actions and Policy Versions
+
+```sparql
+PREFIX aml: <http://agent-memory-ledger.local/ontology#>
+SELECT ?action ?agent ?policy ?reason WHERE {
+    ?action aml:decision "rejected" ;
+            aml:actedBy ?agent ;
+            aml:governedByPolicy ?policy ;
+            aml:decisionReason ?reason .
+}
+```
+
+#### Accepted Memories and Source Events
+
+```sparql
+PREFIX aml: <http://agent-memory-ledger.local/ontology#>
+SELECT ?memory ?agent ?event ?time WHERE {
+    ?memory aml:hasMemoryStatus "accepted" ;
+            aml:hasSourceAgent ?agent ;
+            aml:sourceEvent ?event ;
+            aml:createdAt ?time .
+}
+ORDER BY DESC(?time)
+```
+
+#### Policy Usage Over Actions
+
+```sparql
+PREFIX aml: <http://agent-memory-ledger.local/ontology#>
+SELECT ?policy (COUNT(?action) AS ?actionCount)
+       (COUNT(DISTINCT ?agent) AS ?agentCount) WHERE {
+    ?action aml:governedByPolicy ?policy ;
+            aml:actedBy ?agent .
+}
+GROUP BY ?policy
+ORDER BY DESC(?actionCount)
+```
+
+#### Role Bindings
+
+```sparql
+PREFIX aml: <http://agent-memory-ledger.local/ontology#>
+SELECT ?identity ?role WHERE {
+    ?identity aml:hasActiveRole ?role .
+}
+```
+
+#### Identities from a Split or Merge
+
+```sparql
+PREFIX aml: <http://agent-memory-ledger.local/ontology#>
+PREFIX id: <http://agent-memory-ledger.local/identity/>
+SELECT ?related ?lineageType WHERE {
+    {
+        id:<IDENTITY_UUID> aml:parentIdentity ?related .
+        ?related aml:lineageType ?lineageType .
+    } UNION {
+        ?related aml:parentIdentity id:<IDENTITY_UUID> .
+        ?related aml:lineageType ?lineageType .
+    }
+}
+```
+
+### Rebuilding Oxigraph
+
+Oxigraph data is fully rebuildable from Postgres. To rebuild:
+
+1. Set `oxigraph.rebuild_on_start: true` in add-on configuration.
+2. Restart the add-on.
+3. The projection worker will clear Oxigraph data and re-project from Postgres.
+4. After rebuild completes, set `rebuild_on_start: false` to avoid rebuilding
+   on every restart.
+
+**Rebuild does NOT modify Postgres canonical tables.** It only clears the
+Oxigraph RocksDB store and re-runs the projection queries.
+
+### Projection State Tracking
+
+The projection worker tracks its progress in the `kg.oxigraph_projection_state`
+table. Each projection category (identity_lineage, governance, memory,
+raw_events) has a row with:
+
+- `last_event_time`: the timestamp of the last projected record
+- `last_event_id`: the UUID of the last projected record
+- `status`: idle, running, completed, or error
+- `error`: error message if the last projection failed
+- `last_projected_at`: when the last successful projection ran
+
+This makes the projection resumable and idempotent.
+
+### Security
+
+Oxigraph defaults to internal access only (`bind: 127.0.0.1`). The SPARQL
+endpoint is not exposed outside the add-on container by default.
+
+If you set `expose_port: true`:
+
+- the SPARQL endpoint becomes accessible on the add-on's network port
+- SPARQL queries can reveal governance data, identity relationships, and
+  action history
+- restrict access to trusted networks only
+- consider a reverse proxy with authentication for external access
+
+### Resource Considerations
+
+Oxigraph uses RocksDB for storage. On Home Assistant Yellow (Raspberry Pi CM4,
+8 GB RAM, NVMe):
+
+- Oxigraph adds approximately 20-30 MB RAM when idle
+- Projection batches add temporary CPU and I/O during processing
+- RocksDB compaction may cause periodic disk I/O spikes
+- Projection data size depends on the number of identities, actions, and
+  memories projected
+- Raw event projection (disabled by default) significantly increases data volume
+
+The projection worker is designed to be lightweight:
+
+- configurable batch size (default 500 records)
+- configurable interval (default 60 seconds)
+- no hot-path blocking
+- graceful degradation if Oxigraph is unavailable
+
+### Validation
+
+Run Oxigraph validation inside the container:
+
+```bash
+/usr/share/agent_memory_ledger/validate_oxigraph.sh
+```
+
+The Oxigraph validation covers:
+
+- service running when enabled
+- service not running when disabled
+- SPARQL endpoint responding
+- identity lineage projection
+- governance action projection
+- memory lifecycle projection
+- projection state tracking
+- rebuild safety (Postgres tables unchanged)
+- raw events not projected unless enabled
 
 ## Example Use Cases
 

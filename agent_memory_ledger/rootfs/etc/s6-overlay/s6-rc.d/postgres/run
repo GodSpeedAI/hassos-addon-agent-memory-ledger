@@ -99,6 +99,19 @@ if bashio::config.true 'agent_memory.enabled'; then
 	chmod 700 "/usr/share/agent_memory_ledger/004_setup_agent_memory.sh"
 	/usr/share/agent_memory_ledger/004_setup_agent_memory.sh
 	bashio::log.info "done"
+
+	# Setup Oxigraph projection state tracking if oxigraph is enabled
+	if bashio::config.true 'oxigraph.enabled'; then
+		bashio::log.info "Setting up Oxigraph projection state..."
+		AGENT_MEMORY_DB=$(bashio::config 'agent_memory.database' 'agent_memory')
+		if [[ ! "${AGENT_MEMORY_DB}" =~ ^[A-Za-z0-9_]+$ ]]; then
+			bashio::log.error "Invalid agent_memory.database: '${AGENT_MEMORY_DB}'. Must contain only letters, digits, and underscores."
+		else
+			psql -U postgres -d "${AGENT_MEMORY_DB}" -f "/usr/share/agent_memory_ledger/agent_memory/012_oxigraph_projection_state.sql" || \
+				bashio::log.warning "Could not apply Oxigraph projection state schema."
+		fi
+		bashio::log.info "done"
+	fi
 fi
 
 # Log extension health (installed versions)

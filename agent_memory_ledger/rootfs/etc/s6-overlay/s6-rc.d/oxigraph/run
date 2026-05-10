@@ -1,0 +1,84 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Start Oxigraph SPARQL service if enabled
+# ==============================================================================
+# Oxigraph is an OPTIONAL semantic graph projection service.
+# It is NOT the canonical source of truth — Postgres is.
+# This service only starts when oxigraph.enabled=true.
+# ==============================================================================
+
+# Check if Oxigraph is enabled
+if ! bashio::config.true 'oxigraph.enabled'; then
+    bashio::log.info "Oxigraph is disabled. Not starting."
+    # Sleep forever so s6 does not restart us
+    exec sleep infinity
+fi
+
+# Oxigraph requires agent_memory to be enabled
+if ! bashio::config.true 'agent_memory.enabled'; then
+    bashio::log.error "Oxigraph requires agent_memory.enabled=true. Disabling Oxigraph."
+    exec sleep infinity
+fi
+
+declare OXIGRAPH_DATA
+declare OXIGRAPH_BIND
+declare OXIGRAPH_PORT
+
+OXIGRAPH_DATA=$(bashio::config 'oxigraph.data_dir' '/data/oxigraph')
+OXIGRAPH_BIND=$(bashio::config 'oxigraph.bind' '127.0.0.1')
+OXIGRAPH_PORT=$(bashio::config 'oxigraph.port' '7878')
+
+# Ensure data directory exists
+mkdir -p "${OXIGRAPH_DATA}"
+
+# Wait for PostgreSQL to become available with a timeout
+bashio::log.info "Oxigraph: Waiting for PostgreSQL..."
+
+# Verify psql binary exists
+if ! command -v psql >/dev/null 2>&1; then
+    bashio::log.error "Oxigraph: psql binary not found. Cannot verify PostgreSQL readiness."
+    exec sleep infinity
+fi
+
+declare WAIT_TIMEOUT=60
+declare WAIT_RETRIES=0
+while ! pg_isready -U postgres -h localhost -p 5432 >/dev/null 2>&1; do
+    WAIT_RETRIES=$((WAIT_RETRIES + 1))
+    if [[ ${WAIT_RETRIES} -ge ${WAIT_TIMEOUT} ]]; then
+        bashio::log.error "Oxigraph: PostgreSQL not available after ${WAIT_TIMEOUT} seconds. Cannot start."
+        exec sleep infinity
+    fi
+    sleep 1
+done
+bashio::log.info "Oxigraph: PostgreSQL is ready."
+
+# Check if oxigraph binary exists
+if ! command -v oxigraph >/dev/null 2>&1; then
+    bashio::log.error "Oxigraph binary not found. Cannot start Oxigraph service."
+    exec sleep infinity
+fi
+
+# Handle rebuild_on_start
+if bashio::config.true 'oxigraph.rebuild_on_start'; then
+    bashio::log.notice "Oxigraph: rebuild_on_start is true. Clearing projection data..."
+    # Remove Oxigraph data directory contents (NOT Postgres data)
+    rm -rf "${OXIGRAPH_DATA:?}"/*
+    bashio::log.info "Oxigraph: Projection data cleared. Will rebuild from Postgres."
+fi
+
+# Log configuration
+bashio::log.notice "Starting Oxigraph SPARQL endpoint..."
+bashio::log.info "  Bind: ${OXIGRAPH_BIND}"
+bashio::log.info "  Port: ${OXIGRAPH_PORT}"
+bashio::log.info "  Data: ${OXIGRAPH_DATA}"
+bashio::log.info "  IMPORTANT: Oxigraph is a rebuildable projection. Postgres is canonical."
+
+# Start Oxigraph server in the foreground
+# --location: RocksDB storage path
+# --bind: network interface
+# --port: TCP port
+exec oxigraph serve \
+    --location "${OXIGRAPH_DATA}" \
+    --bind "${OXIGRAPH_BIND}" \
+    --port "${OXIGRAPH_PORT}"

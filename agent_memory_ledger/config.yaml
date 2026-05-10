@@ -21,11 +21,15 @@ backup_post: /usr/share/agent_memory_ledger/backup_post.sh
 backup_exclude:
   - data/postgres/**
   - postgres/**
+  - data/oxigraph/**
 ports:
   5432/tcp:
+  7878/tcp:
 ports_description:
   5432/tcp: "PostgreSQL Port. Beware! This port may already be in use.
     Choose another port-number if the add-on won't start."
+  7878/tcp: "Oxigraph SPARQL endpoint (only active when oxigraph.enabled=true).
+    Default: internal only (127.0.0.1). Set bind to 0.0.0.0 to expose."
 options:
   databases:
     - homeassistant
@@ -41,6 +45,20 @@ options:
   retry_upgrade: false
   agent_memory:
     enabled: false
+  oxigraph:
+    enabled: false
+    data_dir: /data/oxigraph
+    bind: 127.0.0.1
+    port: 7878
+    expose_port: false
+    log_level: info
+    project_governance: true
+    project_identity_lineage: true
+    project_memory: true
+    project_raw_events: false
+    rebuild_on_start: false
+    batch_size: 500
+    max_projection_interval_seconds: 60
   postgresql_config: {}
   pg_hba_config: []
 schema:
@@ -67,6 +85,20 @@ schema:
     retention_days: int(1,)?
     embedding_dimension: int(1,4096)?
     include_embeddings_in_backup: bool?
+  oxigraph:
+    enabled: bool
+    data_dir: str?
+    bind: str?
+    port: port?
+    expose_port: bool?
+    log_level: list(info|debug|warn|error)?
+    project_governance: bool?
+    project_identity_lineage: bool?
+    project_memory: bool?
+    project_raw_events: bool?
+    rebuild_on_start: bool?
+    batch_size: int(1,10000)?
+    max_projection_interval_seconds: int(10,3600)?
   postgresql_config:
     match(^[a-z_]+$)?: str?
   pg_hba_config:

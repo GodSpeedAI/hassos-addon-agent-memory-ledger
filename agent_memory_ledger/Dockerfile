@@ -225,6 +225,32 @@ COPY --from=ruvector-pg17 --link /usr/local/share/postgresql/extension/ruvector*
 # Copy timescaledb-tools
 COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
 
+# --------------------------------------
+# Oxigraph — optional RDF/SPARQL projection service
+# Version: 0.5.8
+# Pre-built static binaries from https://github.com/oxigraph/oxigraph/releases
+# gcompat (already installed) provides glibc compatibility on musl/Alpine.
+# SHA256 checksums are pinned from the GitHub release digest metadata.
+# --------------------------------------
+ARG OXIGRAPH_VERSION=0.5.8
+ARG TARGETARCH
+RUN set -ex \
+    && if [ "${TARGETARCH}" = "arm64" ] || [ "${TARGETARCH}" = "aarch64" ]; then \
+         OXIGRAPH_ARCH="aarch64"; \
+         OXIGRAPH_SHA256="f4970b1b145ef280410f2334690017004983dd57a1fa449b188415730b3a6147"; \
+       elif [ "${TARGETARCH}" = "amd64" ] || [ "${TARGETARCH}" = "x86_64" ]; then \
+         OXIGRAPH_ARCH="x86_64"; \
+         OXIGRAPH_SHA256="c0cb0a3e747cfbc4a5b72ffc20b3eb9ebebf7f21f7b3deb447af3fd7abdcb112"; \
+       else \
+         echo "Unsupported architecture for Oxigraph: ${TARGETARCH}" && exit 1; \
+       fi \
+    && OXIGRAPH_URL="https://github.com/oxigraph/oxigraph/releases/download/v${OXIGRAPH_VERSION}/oxigraph_v${OXIGRAPH_VERSION}_${OXIGRAPH_ARCH}_linux_gnu" \
+    && wget -q -O /tmp/oxigraph "${OXIGRAPH_URL}" \
+    && echo "${OXIGRAPH_SHA256}  /tmp/oxigraph" | sha256sum -c \
+    && chmod +x /tmp/oxigraph \
+    && mv /tmp/oxigraph /usr/local/bin/oxigraph \
+    && oxigraph --version
+
 ###########################################
 # Finalize Image
 ###########################################
@@ -250,7 +276,9 @@ RUN chmod +x /usr/share/agent_memory_ledger/backup_pre.sh \
     && chmod +x /usr/share/agent_memory_ledger/restore_from_backup.sh \
     && chmod +x /usr/share/agent_memory_ledger/004_setup_agent_memory.sh \
     && chmod +x /usr/share/agent_memory_ledger/validate_agent_memory.sh \
-    && chmod +x /usr/share/agent_memory_ledger/validate_governance.sh
+    && chmod +x /usr/share/agent_memory_ledger/validate_governance.sh \
+    && chmod +x /usr/share/agent_memory_ledger/validate_oxigraph.sh \
+    && chmod +x /usr/share/agent_memory_ledger/oxigraph_project.sh
 
 WORKDIR /
 
