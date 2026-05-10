@@ -39,7 +39,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     set -ex \
     && apk update \
     && if [ "$TARGETARCH" == "amd64" ] || [ "$TARGETARCH" == "arm64" ]; then \
-        apk add gcompat clang16-libclang clang15-libclang; \
+        apk add gcompat clang19-libclang clang18-libclang; \
     fi
 
 ENV RUST_MIN_STACK=4194304

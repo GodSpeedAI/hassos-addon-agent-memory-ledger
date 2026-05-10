@@ -1,26 +1,26 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:17.2.5
+ARG BUILD_FROM=ghcr.io/hassio-addons/base/aarch64:20.1.1
 ARG BUILD_ARCH=aarch64
 
-ARG ALPINE_VERSION=3.21
+ARG ALPINE_VERSION=3.23
 
 # Define the versions for all components of the addon
 # These images are all prebuild, otherwise building the docker images takes waaaay to long
 # Where possible, we just take the latest version from the Alpine repository, so it's
 # possible we won't mention the latest version here.
-FROM timescale/timescaledb:2.26.0-pg16                                          AS timescale-pg16
-FROM timescale/timescaledb:2.26.0-pg17                                          AS timescale-pg17
+FROM timescale/timescaledb:2.26.4-pg16                                          AS timescale-pg16
+FROM timescale/timescaledb:2.26.4-pg17                                          AS timescale-pg17
 
 # hadolint ignore=DL3007
 FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-tools:latest                    AS timescaledb-tools
 FROM ghcr.io/expaso/timescaledb/dependency/pgagent-pg16:pgagent-4.2.3                  AS pgagent-pg16
 FROM ghcr.io/expaso/timescaledb/dependency/pgagent-pg17:pgagent-4.2.3                  AS pgagent-pg17
-FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg16:3.6.2                          AS postgis-pg16
-FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg17:3.6.2                          AS postgis-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg16:3.6.3                          AS postgis-pg16
+FROM ghcr.io/expaso/timescaledb/dependency/postgis-pg17:3.6.3                          AS postgis-pg17
 FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg16:1.22.0             AS timescaledb-toolkit-pg16
 FROM ghcr.io/expaso/timescaledb/dependency/timescaledb-toolkit-pg17:1.22.0             AS timescaledb-toolkit-pg17
-FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg16:3.2   AS system-stat-pg16
-FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg17:3.2   AS system-stat-pg17
-FROM ghcr.io/expaso/timescaledb/dependency/pgvector-pg17:0.8.2                         AS pgvector-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg16:4.1   AS system-stat-pg16
+FROM ghcr.io/expaso/timescaledb/dependency/postgresql-extension-system-stat-pg17:4.1   AS system-stat-pg17
+FROM ghcr.io/expaso/timescaledb/dependency/ruvector-pg17:2.0.5                         AS ruvector-pg17
 
 
 ###########################################
@@ -47,7 +47,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
-    && apk add --upgrade libssl3 libcrypto3 openssl-dev
+    && apk add --upgrade libssl3 libcrypto3
 
 ###########################################
 # Install all sub-components
@@ -68,11 +68,12 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 
 # -----------------------------------------
 # PostgreSql 17 (new)
+# Note: PostgreSQL 17 is not yet in Alpine 3.23, install from edge
 # -----------------------------------------
 # hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
-    && apk add \
+    && apk add --repository https://dl-cdn.alpinelinux.org/alpine/edge/main \
         postgresql17-jit \
         postgresql17 \
         postgresql17-dev \
@@ -130,11 +131,11 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # hadolint ignore=DL3018
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
-    && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.21/community --allow-untrusted \
+    && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.23/community --allow-untrusted \
         #postgis=3.5.0-r5 \
         gdal-driver-postgisraster \
     && \
-    apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.21/main \
+    apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.23/main \
         libturbojpeg
 
 # Postgis + Postgis-Raster
@@ -197,7 +198,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     set -ex \
     && apk add \
         gcompat \
-        clang16-libclang
+        clang19-libclang
 
 # --------------------------------------------
 # Extension System-Stat pg-16 (old)
@@ -212,10 +213,11 @@ COPY --from=system-stat-pg17 --link /usr/local/lib/postgresql/system_stats*.so /
 COPY --from=system-stat-pg17 --link /usr/local/share/postgresql/extension/system_stats* /usr/share/postgresql17/extension/
 
 # --------------------------------------------
-# Extension pgVector pg-17 (new)
+# Extension RuVector pg-17 (new)
+# Drop-in pgvector replacement with self-learning search
 # --------------------------------------------
-COPY --from=pgvector-pg17 --link /usr/local/lib/postgresql/vector*.so /usr/lib/postgresql17/
-COPY --from=pgvector-pg17 --link /usr/local/share/postgresql/extension/vector* /usr/share/postgresql17/extension/
+COPY --from=ruvector-pg17 --link /usr/local/lib/postgresql/ruvector*.so /usr/lib/postgresql17/
+COPY --from=ruvector-pg17 --link /usr/local/share/postgresql/extension/ruvector* /usr/share/postgresql17/extension/
 
 # --------------------------------------
 # Timescaledb Tools (alwasys latest)
