@@ -2,7 +2,7 @@
 
 ## Read This First
 
-This repository is a Home Assistant addon that provides PostgreSQL, TimescaleDB, RuVector, and governed agent-memory infrastructure.
+This repository is a Home Assistant addon that provides PostgreSQL, TimescaleDB, RuVector, Oxigraph,and governed agent-memory infrastructure.
 
 Copilot suggestions must preserve the repository's core invariant:
 
