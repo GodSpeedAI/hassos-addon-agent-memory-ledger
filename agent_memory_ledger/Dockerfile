@@ -33,7 +33,7 @@ ARG TARGETARCH=${BUILD_ARCH}
 ARG TARGETVARIANT
 
 # Add some handy tools
-# hadolint ignore=DL3018
+# hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk update \
@@ -44,7 +44,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
         nano
 
 # Upgrade SSL libraries
-# hadolint ignore=DL3018
+# hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add --upgrade libssl3 libcrypto3
@@ -56,7 +56,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # -----------------------------------------
 # PostgreSql 16 (old)
 # -----------------------------------------
-# hadolint ignore=DL3018
+# hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add \
@@ -70,7 +70,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 # PostgreSql 17 (new)
 # Note: PostgreSQL 17 is not yet in Alpine 3.23, install from edge
 # -----------------------------------------
-# hadolint ignore=DL3018
+# hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add --repository https://dl-cdn.alpinelinux.org/alpine/edge/main \
@@ -109,7 +109,7 @@ COPY --from=postgis-pg16 --link /usr/local/share/postgresql/extension/postgis* /
 # Extension Postgis pg-17 (new)
 # -----------------------------------------
 #Add required packages for runtime (see postgis dependencies)
-# hadolint ignore=DL3018
+# hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add  \
@@ -128,7 +128,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
         proj \
         protobuf-c
 
-# hadolint ignore=DL3018
+# hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.23/community --allow-untrusted \
@@ -172,7 +172,7 @@ COPY --from=pgagent-pg17 --link /usr/local/share/pgagent.sql /usr/local/share/
 COPY --from=pgagent-pg17 --link /usr/local/bin/pgagent /usr/local/bin/
 
 # Add compatibility libraries
-# hadolint ignore=DL3018
+# hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add \
@@ -193,7 +193,7 @@ COPY --from=timescaledb-toolkit-pg17 --link /usr/local/lib/postgresql/timescaled
 COPY --from=timescaledb-toolkit-pg17 --link /usr/local/share/postgresql/extension/timescaledb_toolkit* /usr/share/postgresql17/extension/
 
 # Add compatibility libraries for timescaledb toolkit
-# hadolint ignore=DL3018
+# hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add \
@@ -234,6 +234,7 @@ COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
 # --------------------------------------
 ARG OXIGRAPH_VERSION=0.5.8
 ARG TARGETARCH
+# hadolint ignore=DL4006
 RUN set -ex \
     && if [ "${TARGETARCH}" = "arm64" ] || [ "${TARGETARCH}" = "aarch64" ]; then \
          OXIGRAPH_ARCH="aarch64"; \

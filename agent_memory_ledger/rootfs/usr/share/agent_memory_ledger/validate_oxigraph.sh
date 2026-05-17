@@ -86,6 +86,7 @@ wait_for_sparql_result() {
 		sleep "${interval}"
 		waited=$((waited + interval))
 	done
+	warn "Timed out waiting for ${description}"
 	return 1
 }
 

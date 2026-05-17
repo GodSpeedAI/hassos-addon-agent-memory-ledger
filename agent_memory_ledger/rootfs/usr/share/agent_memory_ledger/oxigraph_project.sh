@@ -42,6 +42,8 @@ PROJECT_MEMORY=$(bashio::config 'oxigraph.project_memory' 'true')
 PROJECT_RAW_EVENTS=$(bashio::config 'oxigraph.project_raw_events' 'false')
 REBUILD_ON_START=$(bashio::config 'oxigraph.rebuild_on_start' 'false')
 
+bashio::log.info "Oxigraph Projection: Using endpoint ${OXIGRAPH_URL} with data directory ${OXIGRAPH_DATA}"
+
 # ---------------------------------------------------------------------------
 # RDF Namespace Prefixes
 # ---------------------------------------------------------------------------

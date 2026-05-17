@@ -51,12 +51,11 @@ fi
 
 # Step 1: Create the database if it doesn't exist
 bashio::log.info "Ensuring agent_memory database '${AGENT_MEMORY_DB}' exists..."
-psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${AGENT_MEMORY_DB}'" | grep -q 1 ||
-	psql -U postgres -c "CREATE DATABASE \"${AGENT_MEMORY_DB}\""
-
-if [[ $? -ne 0 ]]; then
-	bashio::log.error "Failed to create agent_memory database '${AGENT_MEMORY_DB}'."
-	exit 1
+if ! psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${AGENT_MEMORY_DB}'" | grep -q 1; then
+	if ! psql -U postgres -c "CREATE DATABASE \"${AGENT_MEMORY_DB}\""; then
+		bashio::log.error "Failed to create agent_memory database '${AGENT_MEMORY_DB}'."
+		exit 1
+	fi
 fi
 
 bashio::log.info "Database '${AGENT_MEMORY_DB}' is ready."

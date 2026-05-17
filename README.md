@@ -3,7 +3,7 @@
 ## Governed Autonomous Event Infrastructure for Home Assistant
 
 Agent Memory Ledger is a Home Assistant add-on that provisions PostgreSQL,
-TimescaleDB, and RuVector as infrastructure for governed autonomous systems.
+TimescaleDB, Oxigraph, and RuVector as infrastructure for governed autonomous systems.
 
 It provides:
 
@@ -34,15 +34,15 @@ execution.
 
 This add-on builds on:
 
-| Component | Purpose |
-| --- | --- |
-| PostgreSQL | Canonical relational persistence |
-| TimescaleDB | Temporal/event scaling and hypertables |
-| RuVector | Vector similarity and embedding search |
-| PostGIS | Geospatial extension support |
-| TimescaleDB Toolkit | Time-series analysis helpers |
-| pgAgent | PostgreSQL job scheduling |
-| Oxigraph | Optional RDF/SPARQL semantic graph projection |
+| Component           | Purpose                                       |
+| ------------------- | --------------------------------------------- |
+| PostgreSQL          | Canonical relational persistence              |
+| TimescaleDB         | Temporal/event scaling and hypertables        |
+| RuVector            | Vector similarity and embedding search        |
+| PostGIS             | Geospatial extension support                  |
+| TimescaleDB Toolkit | Time-series analysis helpers                  |
+| pgAgent             | PostgreSQL job scheduling                     |
+| Oxigraph            | Optional RDF/SPARQL semantic graph projection |
 
 It can still be used as a general PostgreSQL + TimescaleDB add-on for Home
 Assistant recorder data, Grafana dashboards, monitoring, and SQL-based
@@ -114,17 +114,17 @@ distributed workflows.
 
 ## Architecture Overview
 
-| Component | Purpose |
-| --- | --- |
-| Event Ledger | Append-only transition history |
-| Governance Ledger | Action admission, policies, and auditability |
-| Identity Ledger | Governed identity lifecycle and lineage |
-| Memory Lifecycle | Promotion from observation to qualified memory |
-| Embeddings | RuVector-backed semantic retrieval |
-| Replay Layer | Governance reconstruction at a point in time |
-| Audit Projections | Derived evidence views linked to source events |
-| Inbox/Outbox Layer | Broker interoperability and retry-safe delivery |
-| Oxigraph Projection | Optional RDF/SPARQL semantic graph layer |
+| Component           | Purpose                                         |
+| ------------------- | ----------------------------------------------- |
+| Event Ledger        | Append-only transition history                  |
+| Governance Ledger   | Action admission, policies, and auditability    |
+| Identity Ledger     | Governed identity lifecycle and lineage         |
+| Memory Lifecycle    | Promotion from observation to qualified memory  |
+| Embeddings          | RuVector-backed semantic retrieval              |
+| Replay Layer        | Governance reconstruction at a point in time    |
+| Audit Projections   | Derived evidence views linked to source events  |
+| Inbox/Outbox Layer  | Broker interoperability and retry-safe delivery |
+| Oxigraph Projection | Optional RDF/SPARQL semantic graph layer        |
 
 The system is an append-only temporal graph of governed transitions. Core
 entities include agents, humans, services, tools, resources, workspaces,
@@ -138,14 +138,14 @@ Everything evolves through events. Nothing silently mutates.
 When the Agent Memory profile is enabled, the add-on creates an `agent_memory`
 database by default.
 
-| Schema | Purpose |
-| --- | --- |
-| `event_log` | Canonical event history plus inbox/outbox tables |
-| `memory` | Qualified memory lifecycle |
-| `embeddings` | RuVector embedding storage |
+| Schema       | Purpose                                             |
+| ------------ | --------------------------------------------------- |
+| `event_log`  | Canonical event history plus inbox/outbox tables    |
+| `memory`     | Qualified memory lifecycle                          |
+| `embeddings` | RuVector embedding storage                          |
 | `governance` | Identity, policy, action, lineage, and replay state |
-| `kg` | Oxigraph projection state tracking |
-| `audit` | Optional derived audit projections |
+| `kg`         | Oxigraph projection state tracking                  |
+| `audit`      | Optional derived audit projections                  |
 
 The currently provisioned schema files focus on `event_log`, `memory`,
 `embeddings`, and `governance`.
@@ -267,13 +267,13 @@ Replay reconstructs:
 
 Available replay helpers include:
 
-| Function or view | Purpose |
-| --- | --- |
-| `governance.identity_status_at(identity_id, timestamp)` | Identity status at a point in time |
-| `governance.role_bindings_at(identity_id, timestamp)` | Active role bindings at a point in time |
-| `governance.active_policy_at(policy_name, timestamp)` | Active policy version at a point in time |
-| `governance.lineage_ancestors(identity_id, max_depth)` | Identity lineage traversal |
-| `governance.replay_identity_status` | Current identity status with source event reference |
+| Function or view                                        | Purpose                                             |
+| ------------------------------------------------------- | --------------------------------------------------- |
+| `governance.identity_status_at(identity_id, timestamp)` | Identity status at a point in time                  |
+| `governance.role_bindings_at(identity_id, timestamp)`   | Active role bindings at a point in time             |
+| `governance.active_policy_at(policy_name, timestamp)`   | Active policy version at a point in time            |
+| `governance.lineage_ancestors(identity_id, max_depth)`  | Identity lineage traversal                          |
+| `governance.replay_identity_status`                     | Current identity status with source event reference |
 
 ## Inbox / Outbox Infrastructure
 
@@ -303,13 +303,13 @@ Examples:
 
 Current governance audit views include:
 
-| View | Purpose |
-| --- | --- |
-| `governance.audit_action_timeline` | Action requests with identity, decision, and policy context |
-| `governance.audit_identity_lineage` | Human-readable lineage relationships |
-| `governance.audit_policy_usage` | Policy version usage statistics |
-| `governance.audit_rejected_actions` | Rejected actions with governance context |
-| `governance.replay_identity_status` | Current identity status with last event reference |
+| View                                | Purpose                                                     |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `governance.audit_action_timeline`  | Action requests with identity, decision, and policy context |
+| `governance.audit_identity_lineage` | Human-readable lineage relationships                        |
+| `governance.audit_policy_usage`     | Policy version usage statistics                             |
+| `governance.audit_rejected_actions` | Rejected actions with governance context                    |
+| `governance.replay_identity_status` | Current identity status with last event reference           |
 
 All derived views preserve source-event linkage. Audit artifacts can trace back
 to canonical events.
@@ -419,16 +419,16 @@ agent_memory:
 
 Options:
 
-| Option | Default | Purpose |
-| --- | --- | --- |
-| `enabled` | `false` | Enables the Agent Memory profile |
-| `database` | `agent_memory` | Database to create/use |
-| `create_default_schema` | `true` | Applies bundled schema files |
-| `enable_ruvector` | `true` | Enables RuVector and vector search |
-| `enable_timescaledb` | `true` | Enables TimescaleDB and hypertables |
-| `retention_days` | `90` | Retention period for event hypertables |
-| `embedding_dimension` | `1536` | RuVector dimension, from 1 to 4096 |
-| `include_embeddings_in_backup` | `true` | Includes embeddings in SQL backups |
+| Option                         | Default        | Purpose                                |
+| ------------------------------ | -------------- | -------------------------------------- |
+| `enabled`                      | `false`        | Enables the Agent Memory profile       |
+| `database`                     | `agent_memory` | Database to create/use                 |
+| `create_default_schema`        | `true`         | Applies bundled schema files           |
+| `enable_ruvector`              | `true`         | Enables RuVector and vector search     |
+| `enable_timescaledb`           | `true`         | Enables TimescaleDB and hypertables    |
+| `retention_days`               | `90`           | Retention period for event hypertables |
+| `embedding_dimension`          | `1536`         | RuVector dimension, from 1 to 4096     |
+| `include_embeddings_in_backup` | `true`         | Includes embeddings in SQL backups     |
 
 When enabled, the add-on applies conservative PostgreSQL defaults suitable for
 small Home Assistant systems:
@@ -586,12 +586,12 @@ The projection is:
 
 ### What Gets Projected
 
-| Category | Default | Contents |
-| --- | --- | --- |
-| Identity lineage | on | identities, lineage edges, role bindings |
-| Governance | on | action requests, decisions, policy references |
-| Memory | on | memory items, status, embedding existence |
-| Raw events | off | event metadata only (never full JSON payloads) |
+| Category         | Default | Contents                                       |
+| ---------------- | ------- | ---------------------------------------------- |
+| Identity lineage | on      | identities, lineage edges, role bindings       |
+| Governance       | on      | action requests, decisions, policy references  |
+| Memory           | on      | memory items, status, embedding existence      |
+| Raw events       | off     | event metadata only (never full JSON payloads) |
 
 ### Enabling Oxigraph
 
@@ -618,57 +618,57 @@ oxigraph:
 
 Options:
 
-| Option | Default | Purpose |
-| --- | --- | --- |
-| `enabled` | `false` | Enables the Oxigraph SPARQL service |
-| `data_dir` | `/data/oxigraph` | Persistent storage path for Oxigraph/RocksDB |
-| `bind` | `127.0.0.1` | Network interface (localhost = internal only) |
-| `port` | `7878` | SPARQL endpoint TCP port |
-| `expose_port` | `false` | Expose port outside the add-on network |
-| `log_level` | `info` | Oxigraph server log verbosity |
-| `project_governance` | `true` | Project action requests and decisions |
-| `project_identity_lineage` | `true` | Project identities, lineage, and roles |
-| `project_memory` | `true` | Project memory items and lifecycle |
-| `project_raw_events` | `false` | Project raw event metadata (not payloads) |
-| `rebuild_on_start` | `false` | Clear and rebuild Oxigraph on add-on start |
-| `batch_size` | `500` | Records per projection batch |
-| `max_projection_interval_seconds` | `60` | Seconds between projection cycles |
+| Option                            | Default          | Purpose                                       |
+| --------------------------------- | ---------------- | --------------------------------------------- |
+| `enabled`                         | `false`          | Enables the Oxigraph SPARQL service           |
+| `data_dir`                        | `/data/oxigraph` | Persistent storage path for Oxigraph/RocksDB  |
+| `bind`                            | `127.0.0.1`      | Network interface (localhost = internal only) |
+| `port`                            | `7878`           | SPARQL endpoint TCP port                      |
+| `expose_port`                     | `false`          | Expose port outside the add-on network        |
+| `log_level`                       | `info`           | Oxigraph server log verbosity                 |
+| `project_governance`              | `true`           | Project action requests and decisions         |
+| `project_identity_lineage`        | `true`           | Project identities, lineage, and roles        |
+| `project_memory`                  | `true`           | Project memory items and lifecycle            |
+| `project_raw_events`              | `false`          | Project raw event metadata (not payloads)     |
+| `rebuild_on_start`                | `false`          | Clear and rebuild Oxigraph on add-on start    |
+| `batch_size`                      | `500`            | Records per projection batch                  |
+| `max_projection_interval_seconds` | `60`             | Seconds between projection cycles             |
 
 ### RDF Vocabulary
 
 The projection uses a small internal vocabulary with stable prefixes:
 
-| Prefix | IRI |
-| --- | --- |
+| Prefix | IRI                                          |
+| ------ | -------------------------------------------- |
 | `aml:` | `http://agent-memory-ledger.local/ontology#` |
-| `id:` | `http://agent-memory-ledger.local/identity/` |
-| `evt:` | `http://agent-memory-ledger.local/event/` |
-| `act:` | `http://agent-memory-ledger.local/action/` |
-| `mem:` | `http://agent-memory-ledger.local/memory/` |
-| `pol:` | `http://agent-memory-ledger.local/policy/` |
+| `id:`  | `http://agent-memory-ledger.local/identity/` |
+| `evt:` | `http://agent-memory-ledger.local/event/`    |
+| `act:` | `http://agent-memory-ledger.local/action/`   |
+| `mem:` | `http://agent-memory-ledger.local/memory/`   |
+| `pol:` | `http://agent-memory-ledger.local/policy/`   |
 
 Key predicates:
 
-| Predicate | Purpose |
-| --- | --- |
-| `aml:hasType` | Resource type (identity, action_request, memory_item, agent_event) |
-| `aml:hasStatus` | Current status |
-| `aml:createdAt` | Creation timestamp (xsd:dateTime) |
-| `aml:retiredAt` | Retirement timestamp (xsd:dateTime) |
-| `aml:actedBy` | Acting identity reference |
-| `aml:requestedAction` | Action type |
-| `aml:targetResource` | Target resource |
-| `aml:governedByPolicy` | Policy version reference |
-| `aml:decision` | Admission decision |
-| `aml:decisionReason` | Decision explanation |
-| `aml:parentIdentity` | Lineage parent |
-| `aml:childIdentity` | Lineage child |
-| `aml:lineageType` | Lineage relationship type |
-| `aml:boundToRole` | Role binding |
-| `aml:sourceEvent` | Source event reference |
-| `aml:hasMemoryStatus` | Memory lifecycle status |
-| `aml:hasEmbedding` | Whether embedding exists (true/false) |
-| `aml:observedAt` | Observation timestamp |
+| Predicate              | Purpose                                                            |
+| ---------------------- | ------------------------------------------------------------------ |
+| `aml:hasType`          | Resource type (identity, action_request, memory_item, agent_event) |
+| `aml:hasStatus`        | Current status                                                     |
+| `aml:createdAt`        | Creation timestamp (xsd:dateTime)                                  |
+| `aml:retiredAt`        | Retirement timestamp (xsd:dateTime)                                |
+| `aml:actedBy`          | Acting identity reference                                          |
+| `aml:requestedAction`  | Action type                                                        |
+| `aml:targetResource`   | Target resource                                                    |
+| `aml:governedByPolicy` | Policy version reference                                           |
+| `aml:decision`         | Admission decision                                                 |
+| `aml:decisionReason`   | Decision explanation                                               |
+| `aml:parentIdentity`   | Lineage parent                                                     |
+| `aml:childIdentity`    | Lineage child                                                      |
+| `aml:lineageType`      | Lineage relationship type                                          |
+| `aml:boundToRole`      | Role binding                                                       |
+| `aml:sourceEvent`      | Source event reference                                             |
+| `aml:hasMemoryStatus`  | Memory lifecycle status                                            |
+| `aml:hasEmbedding`     | Whether embedding exists (true/false)                              |
+| `aml:observedAt`       | Observation timestamp                                              |
 
 UUIDs are represented as stable IRIs (not blank nodes). Timestamps use
 `xsd:dateTime`.

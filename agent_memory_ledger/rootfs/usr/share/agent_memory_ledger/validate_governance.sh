@@ -222,7 +222,7 @@ run_sql_silent "UPDATE governance.identities SET status = 'retired', retired_at 
 # Verify the identity is retired
 RETIRE_STATUS=$(run_sql "SELECT status FROM governance.identities WHERE identity_id = '${RETIRE_ID}';")
 if [[ "${RETIRE_STATUS}" == "retired" ]]; then
-	pass "Identity ${RETIRE_ID} is now retired"
+	pass "Identity ${RETIRE_ID} is now retired by event ${RETIRE_EVENT_ID}"
 else
 	fail "Identity ${RETIRE_ID} status is '${RETIRE_STATUS}', expected 'retired'"
 fi
