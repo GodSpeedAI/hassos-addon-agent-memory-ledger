@@ -81,6 +81,19 @@ jobs:
           tags: |
             ghcr.io/godspeedai/agent-memory-ledger/${{ matrix.arch }}:${{ steps.addon.outputs.version }}
 
+      - name: Ensure package is publicly readable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          pkg="agent-memory-ledger%2F${{ matrix.arch }}"
+          # Try org-level first, then user-level
+          if ! gh api -X PATCH "/orgs/${{ github.repository_owner }}/packages/container/${pkg}" \
+               -f visibility=public 2>/dev/null; then
+            gh api -X PATCH "/user/packages/container/${pkg}" \
+              -f visibility=public 2>/dev/null || true
+          fi
+
       - name: Verify anonymous image pull
         shell: bash
         run: |
