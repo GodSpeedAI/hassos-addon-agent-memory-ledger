@@ -228,15 +228,20 @@ COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
 # --------------------------------------
 # Oxigraph — optional RDF/SPARQL projection service
 # Version: 0.5.8
-# Pre-built static binaries from https://github.com/oxigraph/oxigraph/releases
-# Requires libstdc++ and libgcc for glibc binary compatibility on musl/Alpine.
+# Pre-built binaries from https://github.com/oxigraph/oxigraph/releases
+# Requires libstdc++, libgcc, and a glibc resolver stub for binary
+# compatibility on musl/Alpine. The stub provides __res_init which
+# glibc links but musl does not provide.
 # SHA256 checksums are pinned from the GitHub release digest metadata.
 # --------------------------------------
 ARG OXIGRAPH_VERSION=0.5.8
 ARG TARGETARCH
 # hadolint ignore=DL4006,DL3018
 RUN set -ex \
-    && apk add --no-cache libstdc++ libgcc \
+    && apk add --no-cache libstdc++ libgcc gcc musl-dev \
+    && printf 'int __res_init(void) { return 0; }\n' > /tmp/resolv_stub.c \
+    && gcc -shared -fPIC -o /usr/lib/libresolv_stub.so /tmp/resolv_stub.c \
+    && rm -f /tmp/resolv_stub.c \
     && if [ "${TARGETARCH}" = "arm64" ] || [ "${TARGETARCH}" = "aarch64" ]; then \
          OXIGRAPH_ARCH="aarch64"; \
          OXIGRAPH_SHA256="f4970b1b145ef280410f2334690017004983dd57a1fa449b188415730b3a6147"; \
@@ -251,7 +256,7 @@ RUN set -ex \
     && echo "${OXIGRAPH_SHA256}  /tmp/oxigraph" | sha256sum -c \
     && chmod +x /tmp/oxigraph \
     && mv /tmp/oxigraph /usr/local/bin/oxigraph \
-    && oxigraph --version
+    && LD_PRELOAD="/usr/lib/libresolv_stub.so /lib/libgcompat.so" oxigraph --version
 
 ###########################################
 # Finalize Image
@@ -260,7 +265,8 @@ RUN set -ex \
 # Make sure that S6 is not so hard on our service startup/shutdown
 ENV \
     S6_SERVICES_GRACETIME=50000 \
-    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+    LD_PRELOAD="/usr/lib/libresolv_stub.so /lib/libgcompat.so"
 
 ARG CACHE_BUST
 
