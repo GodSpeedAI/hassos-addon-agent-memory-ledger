@@ -38,6 +38,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     && if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ]; then \
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable \
             && export PATH="/root/.cargo/bin:${PATH}" \
+            && export RUSTFLAGS="-C target-feature=-crt-static" \
             && cargo install --version '0.12.9' --locked --force cargo-pgrx \
             && cargo pgrx init --pg17 /usr/local/bin/pg_config \
             && mkdir -p /build/source \
