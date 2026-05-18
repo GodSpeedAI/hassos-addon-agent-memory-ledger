@@ -37,7 +37,9 @@ WORKDIR /workspace
 
 # Clone and checkout the specific version
 RUN git clone https://github.com/ruvnet/RuVector.git . \
-    && git checkout "v${VERSION}"
+    && git checkout "v${VERSION}" \
+    && sed -i 's/as \*const i8/as *const std::os::raw::c_char/g; s/as \*mut i8/as *mut std::os::raw::c_char/g' \
+    crates/ruvector-postgres/src/types/vector.rs
 
 # Initialize pgrx with system PostgreSQL 17
 RUN cargo pgrx init --pg17=/usr/lib/postgresql/17/bin/pg_config
