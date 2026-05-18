@@ -229,13 +229,14 @@ COPY --from=timescaledb-tools /go/bin/* /usr/local/bin/
 # Oxigraph — optional RDF/SPARQL projection service
 # Version: 0.5.8
 # Pre-built static binaries from https://github.com/oxigraph/oxigraph/releases
-# gcompat (already installed) provides glibc compatibility on musl/Alpine.
+# Requires libstdc++ and libgcc for glibc binary compatibility on musl/Alpine.
 # SHA256 checksums are pinned from the GitHub release digest metadata.
 # --------------------------------------
 ARG OXIGRAPH_VERSION=0.5.8
 ARG TARGETARCH
-# hadolint ignore=DL4006
+# hadolint ignore=DL4006,DL3018
 RUN set -ex \
+    && apk add --no-cache libstdc++ libgcc \
     && if [ "${TARGETARCH}" = "arm64" ] || [ "${TARGETARCH}" = "aarch64" ]; then \
          OXIGRAPH_ARCH="aarch64"; \
          OXIGRAPH_SHA256="f4970b1b145ef280410f2334690017004983dd57a1fa449b188415730b3a6147"; \
