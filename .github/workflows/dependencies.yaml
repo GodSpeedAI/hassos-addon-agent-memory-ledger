@@ -51,8 +51,6 @@ jobs:
             version: "4.1"
           - component: postgresql-extension-system-stat-pg17
             version: "4.1"
-          - component: ruvector-pg17
-            version: 2.0.5
 
     steps:
       - name: Check out repository
@@ -106,3 +104,68 @@ jobs:
             type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:cache,mode=max
           tags: |
             ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:${{ matrix.version }}
+
+  # RuVector requires Rust compilation which is too slow under QEMU arm64 emulation.
+  # Build each architecture on native runners instead.
+  publish-ruvector:
+    name: Publish ruvector-pg17 (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish ruvector-pg17
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./agent_memory_ledger/docker-dependencies/ruvector-pg17
+          platforms: ${{ matrix.platform }}
+          push: true
+          build-args: |
+            VERSION=2.0.5
+          cache-from: |
+            type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/ruvector-pg17:cache-${{ matrix.arch }}
+          cache-to: |
+            type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/ruvector-pg17:cache-${{ matrix.arch }},mode=max
+          tags: |
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/ruvector-pg17:2.0.5-${{ matrix.arch }}
+
+  # Merge per-architecture ruvector images into a single multi-arch manifest
+  manifest-ruvector:
+    name: Merge ruvector-pg17 manifest
+    needs: publish-ruvector
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/godspeedai/agent-memory-ledger/dependency/ruvector-pg17:2.0.5 \
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/ruvector-pg17:2.0.5-amd64 \
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/ruvector-pg17:2.0.5-arm64
