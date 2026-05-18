@@ -1,56 +1,56 @@
-FROM timescale/timescaledb:latest-pg17 AS timescale-pg17
-
-FROM timescale-pg17 AS ruvector
+# Stage 1: Build ruvector-postgres on Debian (matching upstream build environment)
+# hadolint ignore=DL3007
+FROM rustlang/rust:nightly-bookworm-slim AS builder
 ARG VERSION
 ARG TARGETARCH
 ARG TARGETVARIANT
 
-# --------------------------------------------
-# RuVector-Postgres - build and install
-# Vector search with GNN layers, SQL functions, and SIMD acceleration.
-# --------------------------------------------
-# hadolint ignore=DL3018, DL3003, DL3019, DL4006
-RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
-    --mount=type=cache,id=cargo-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cargo \
-    --mount=type=cache,id=cargo-build-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/build/target \
-    set -ex \
-    && apk update \
-    && apk add --virtual .fetch-deps \
-                ca-certificates \
-                git \
-                openssl \
-                openssl-dev \
-                openssl-libs-static \
-                tar \
-                wget \
-                curl \
-    && apk add --virtual .build-deps \
-                coreutils \
-                gcc \
-                make \
-                cmake \
-                build-base \
-                clang19 \
-                clang19-libclang \
-                llvm19 \
-                musl-dev \
-                pkgconf \
-    && if [ "$TARGETARCH" = "amd64" ] || [ "$TARGETARCH" = "arm64" ]; then \
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable \
-            && export PATH="/root/.cargo/bin:${PATH}" \
-            && export RUSTFLAGS="-C target-feature=-crt-static" \
-            && cargo install --version '0.12.9' --locked --force cargo-pgrx \
-            && cargo pgrx init --pg17 /usr/local/bin/pg_config \
-            && mkdir -p /build/source \
-            && cd /build/source \
-            && git clone https://github.com/ruvnet/RuVector.git . \
-            && git checkout "v${VERSION}" \
-            && cd crates/ruvector-postgres \
-            && cargo pgrx install --release --features "index-all"; \
-       fi \
-    && cd ~ \
-    && apk del .fetch-deps .build-deps \
-    && rm -rf /build /root/.cargo /root/.rustup
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libssl-dev \
+    pkg-config \
+    clang \
+    libclang-dev \
+    flex \
+    bison \
+    curl \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add PostgreSQL 17 from PGDG
+# hadolint ignore=DL3008,DL4006
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+    > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-server-dev-17 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install cargo-pgrx
+RUN cargo install cargo-pgrx --version 0.12.9 --locked
+
+WORKDIR /workspace
+
+# Clone and checkout the specific version
+RUN git clone https://github.com/ruvnet/RuVector.git . \
+    && git checkout "v${VERSION}"
+
+# Initialize pgrx with system PostgreSQL 17
+RUN cargo pgrx init --pg17=/usr/lib/postgresql/17/bin/pg_config
+
+# Build only the ruvector-postgres crate with pg17 features
+WORKDIR /workspace/crates/ruvector-postgres
+RUN cargo pgrx package --features "pg17 index-all"
+
+# Stage 2: Copy built extension into TimescaleDB Alpine image
+FROM timescale/timescaledb:latest-pg17
+
+# Copy the built .so and extension files from the Debian builder
+COPY --from=builder /workspace/target/release/ruvector-pg17/usr/lib/postgresql/17/lib/ruvector*.so /usr/local/lib/postgresql/
+COPY --from=builder /workspace/target/release/ruvector-pg17/usr/share/postgresql/17/extension/ruvector* /usr/local/share/postgresql/extension/
 
 # Labels
 LABEL \
