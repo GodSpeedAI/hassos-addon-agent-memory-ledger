@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     gnupg \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Add PostgreSQL 17 from PGDG
