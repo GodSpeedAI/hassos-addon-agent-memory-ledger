@@ -1,6 +1,6 @@
 # Stage 1: Build ruvector-postgres on Debian (matching upstream build environment)
 # hadolint ignore=DL3007
-FROM rustlang/rust:nightly-bookworm-slim AS builder
+FROM rust:1.85-bookworm-slim AS builder
 ARG VERSION
 ARG TARGETARCH
 ARG TARGETVARIANT
