@@ -39,8 +39,8 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
             && export PATH="/root/.cargo/bin:${PATH}" \
             && cargo install --version '0.12.9' --locked --force cargo-pgrx \
             && cargo pgrx init --pg17 /usr/local/bin/pg_config \
-            && mkdir -p /build \
-            && cd /build \
+            && mkdir -p /build/source \
+            && cd /build/source \
             && git clone https://github.com/ruvnet/RuVector.git . \
             && git checkout ${VERSION} \
             && cd crates/ruvector-postgres \
