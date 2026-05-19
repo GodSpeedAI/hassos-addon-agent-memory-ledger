@@ -282,7 +282,8 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
 
 COPY requirements-bridge.txt /tmp/requirements-bridge.txt
 # hadolint ignore=DL3018,DL3019
-RUN pip install --no-cache-dir --break-system-packages \
+RUN --mount=type=cache,id=pip-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/root/.cache/pip \
+    pip install --break-system-packages \
         -r /tmp/requirements-bridge.txt \
     && rm -f /tmp/requirements-bridge.txt
 

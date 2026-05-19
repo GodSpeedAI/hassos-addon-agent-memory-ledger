@@ -53,8 +53,7 @@ RUN --mount=type=cache,id=pgrx-${TARGETARCH}-${TARGETVARIANT},sharing=locked,tar
         && export RUSTFLAGS="-C target-feature=-crt-static -C codegen-units=1" \
         && mkdir -p /build/ \
         && cd /build \
-            && git clone https://github.com/timescale/timescaledb-toolkit.git . \
-            && git checkout ${VERSION} \
+            && git clone --branch "${VERSION}" --depth 1 https://github.com/timescale/timescaledb-toolkit.git . \
             && cd extension \
             # initdb fails as root so generate the correct config ourselves
             # && cargo pgx init --pg16 /usr/lib/postgresql/14/bin/pg_config

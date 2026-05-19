@@ -18,12 +18,25 @@ on:
         default: ruvector-pg17
         type: choice
         options:
+          - timescaledb-tools
+          - pgagent-pg16
+          - pgagent-pg17
+          - postgis-pg16
+          - postgis-pg17
+          - timescaledb-toolkit-pg16
+          - timescaledb-toolkit-pg17
+          - postgresql-extension-system-stat-pg16
+          - postgresql-extension-system-stat-pg17
           - ruvector-pg17
           - all
 
 permissions:
   contents: read
   packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   publish:
@@ -43,10 +56,6 @@ jobs:
             version: 3.6.3
           - component: postgis-pg17
             version: 3.6.3
-          - component: timescaledb-toolkit-pg16
-            version: 1.22.0
-          - component: timescaledb-toolkit-pg17
-            version: 1.22.0
           - component: postgresql-extension-system-stat-pg16
             version: "4.1"
           - component: postgresql-extension-system-stat-pg17
@@ -105,10 +114,124 @@ jobs:
           tags: |
             ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:${{ matrix.version }}
 
+  # TimescaleDB Toolkit is a Rust extension built with cargo-pgrx. Building the
+  # arm64 image under QEMU is extremely slow, so build each architecture natively
+  # and merge the results into a multi-arch manifest.
+  publish-timescaledb-toolkit:
+    name: Publish ${{ matrix.component }} (${{ matrix.arch }})
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.component == 'all' ||
+      inputs.component == matrix.component
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: timescaledb-toolkit-pg16
+            version: 1.22.0
+            arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - component: timescaledb-toolkit-pg16
+            version: 1.22.0
+            arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+          - component: timescaledb-toolkit-pg17
+            version: 1.22.0
+            arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - component: timescaledb-toolkit-pg17
+            version: 1.22.0
+            arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish ${{ matrix.component }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./agent_memory_ledger/docker-dependencies/${{ matrix.component }}
+          platforms: ${{ matrix.platform }}
+          push: true
+          build-args: |
+            VERSION=${{ matrix.version }}
+          cache-from: |
+            type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:cache-${{ matrix.arch }}
+          cache-to: |
+            type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:cache-${{ matrix.arch }},mode=max
+          tags: |
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:${{ matrix.version }}-${{ matrix.arch }}
+
+  manifest-timescaledb-toolkit-pg16:
+    name: Merge timescaledb-toolkit-pg16 manifest
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.component == 'all' ||
+      inputs.component == 'timescaledb-toolkit-pg16'
+    needs: publish-timescaledb-toolkit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/godspeedai/agent-memory-ledger/dependency/timescaledb-toolkit-pg16:1.22.0 \
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/timescaledb-toolkit-pg16:1.22.0-amd64 \
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/timescaledb-toolkit-pg16:1.22.0-arm64
+
+  manifest-timescaledb-toolkit-pg17:
+    name: Merge timescaledb-toolkit-pg17 manifest
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.component == 'all' ||
+      inputs.component == 'timescaledb-toolkit-pg17'
+    needs: publish-timescaledb-toolkit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/godspeedai/agent-memory-ledger/dependency/timescaledb-toolkit-pg17:1.22.0 \
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/timescaledb-toolkit-pg17:1.22.0-amd64 \
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/timescaledb-toolkit-pg17:1.22.0-arm64
+
   # RuVector requires Rust compilation which is too slow under QEMU arm64 emulation.
   # Build each architecture on native runners instead.
   publish-ruvector:
     name: Publish ruvector-pg17 (${{ matrix.arch }})
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.component == 'all' ||
+      inputs.component == 'ruvector-pg17'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -153,6 +276,10 @@ jobs:
   # Merge per-architecture ruvector images into a single multi-arch manifest
   manifest-ruvector:
     name: Merge ruvector-pg17 manifest
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      inputs.component == 'all' ||
+      inputs.component == 'ruvector-pg17'
     needs: publish-ruvector
     runs-on: ubuntu-latest
     steps:
