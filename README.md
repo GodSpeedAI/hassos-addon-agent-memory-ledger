@@ -501,8 +501,8 @@ After the GHCR workflow has published images, pull the image for your
 architecture:
 
 ```bash
-docker pull ghcr.io/godspeedai/agent-memory-ledger/amd64:0.3.1
-docker pull ghcr.io/godspeedai/agent-memory-ledger/aarch64:0.3.1
+docker pull ghcr.io/godspeedai/agent-memory-ledger/amd64:0.3.2
+docker pull ghcr.io/godspeedai/agent-memory-ledger/aarch64:0.3.2
 ```
 
 For local development, build the image from this repository:
@@ -526,7 +526,7 @@ docker run \
   --name agent-memory-ledger \
   -v "${PWD}/agent_memory_ledger_addon_data:/data" \
   -p 5432:5432 \
-  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.3.1
+  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.3.2
 ```
 
 Run it as a daemon:
@@ -537,7 +537,7 @@ docker run \
   --name agent-memory-ledger \
   -v "${PWD}/agent_memory_ledger_addon_data:/data" \
   -p 5432:5432 \
-  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.3.1
+  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.3.2
 ```
 
 This maps PostgreSQL port `5432` and stores add-on data in

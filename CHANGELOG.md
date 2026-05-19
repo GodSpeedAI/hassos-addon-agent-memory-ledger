@@ -8,6 +8,12 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 This changelog was introduced after earlier tagged releases, so pre-0.3.0 history may be backfilled incrementally.
 
+## [0.3.2] - 2026-05-19
+
+### Fixed
+
+- Fixed `workflow_dispatch` parsing for the Dependencies workflow by moving matrix-based component filtering from job-level conditions to step-level conditions.
+
 ## [0.3.1] - 2026-05-19
 
 ### Changed
