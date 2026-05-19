@@ -495,12 +495,14 @@ The add-on currently supports `amd64` and `aarch64`.
 You can also run the container on a separate Docker host. Docker Hub is not
 required; this project publishes add-on images to GitHub Container Registry.
 
+The architecture images must be public in GHCR before Home Assistant can install the add-on.
+
 After the GHCR workflow has published images, pull the image for your
 architecture:
 
 ```bash
-docker pull ghcr.io/godspeedai/agent-memory-ledger/amd64:0.1.0
-docker pull ghcr.io/godspeedai/agent-memory-ledger/aarch64:0.1.0
+docker pull ghcr.io/godspeedai/agent-memory-ledger/amd64:0.2.0
+docker pull ghcr.io/godspeedai/agent-memory-ledger/aarch64:0.2.0
 ```
 
 For local development, build the image from this repository:
@@ -524,7 +526,7 @@ docker run \
   --name agent-memory-ledger \
   -v "${PWD}/agent_memory_ledger_addon_data:/data" \
   -p 5432:5432 \
-  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.1.0
+  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.2.0
 ```
 
 Run it as a daemon:
@@ -535,7 +537,7 @@ docker run \
   --name agent-memory-ledger \
   -v "${PWD}/agent_memory_ledger_addon_data:/data" \
   -p 5432:5432 \
-  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.1.0
+  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.2.0
 ```
 
 This maps PostgreSQL port `5432` and stores add-on data in
