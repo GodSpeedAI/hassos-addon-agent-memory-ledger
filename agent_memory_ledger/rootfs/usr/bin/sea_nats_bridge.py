@@ -24,10 +24,10 @@ import signal
 import sys
 import time
 import uuid
-from urllib.parse import quote_plus
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from typing import Any
+from urllib.parse import quote_plus
 
 import nats
 import psycopg

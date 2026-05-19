@@ -186,14 +186,14 @@ Use `timescaledb-tune` only where it respects container limits and Home Assistan
 
 The test suite contains 168 pure unit tests across 6 modules:
 
-| Module | Tests | Coverage area |
-|---|---|---|
-| `test_subject_routing.py` | 21 | Subject family extraction, canonical route mapping, message ID derivation |
-| `test_envelope_validation.py` | 47 | Envelope validation, payload validation, contract validation, fail-open/fail-closed |
-| `test_bridge.py` | 17 | Inbound processing, idempotency, transactionality, outbound dispatch |
-| `test_health.py` | 15 | `/healthz`, `/readyz`, `/metrics-lite`, HTTP routing |
-| `test_sql_schema.py` | 55 | SQL schema smoke tests, least-privilege role grants, constraint validation |
-| `test_config.py` | 5 | BridgeConfig defaults, env loading, DSN construction |
+| Module                        | Tests | Coverage area                                                                       |
+| ----------------------------- | ----- | ----------------------------------------------------------------------------------- |
+| `test_subject_routing.py`     | 21    | Subject family extraction, canonical route mapping, message ID derivation           |
+| `test_envelope_validation.py` | 47    | Envelope validation, payload validation, contract validation, fail-open/fail-closed |
+| `test_bridge.py`              | 17    | Inbound processing, idempotency, transactionality, outbound dispatch                |
+| `test_health.py`              | 15    | `/healthz`, `/readyz`, `/metrics-lite`, HTTP routing                                |
+| `test_sql_schema.py`          | 55    | SQL schema smoke tests, least-privilege role grants, constraint validation          |
+| `test_config.py`              | 5     | BridgeConfig defaults, env loading, DSN construction                                |
 
 Run with:
 
@@ -213,7 +213,7 @@ For SQL or governance changes, prefer tests or validation scripts that prove:
 - active policy can be reconstructed at time T
 - action admission decisions can be replayed
 - identity lineage remains acyclic
-- duplicate events are rejected or handled idempotically
+- duplicate events are rejected or handled idempotently
 - migrations can run more than once safely
 
 For addon behavior, verify initialization, service startup and shutdown, configuration validation, extension loading, backup, and restore paths where affected.

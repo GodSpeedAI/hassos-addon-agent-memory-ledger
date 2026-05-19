@@ -9,52 +9,33 @@ Covers:
 """
 
 
-
 class TestSubjectFamily:
     """Tests for the subject_family() function."""
 
     def test_agent_event_created(self, bridge_module):
-        assert (
-            bridge_module.subject_family("sea.agent.event.created") == "sea.agent.event"
-        )
+        assert bridge_module.subject_family("sea.agent.event.created") == "sea.agent.event"
 
     def test_agent_event_updated(self, bridge_module):
-        assert (
-            bridge_module.subject_family("sea.agent.event.updated") == "sea.agent.event"
-        )
+        assert bridge_module.subject_family("sea.agent.event.updated") == "sea.agent.event"
 
     def test_governance_request_tool_call(self, bridge_module):
-        assert (
-            bridge_module.subject_family("sea.governance.request.tool_call")
-            == "sea.governance.request"
-        )
+        assert bridge_module.subject_family("sea.governance.request.tool_call") == "sea.governance.request"
 
     def test_governance_decision_accepted(self, bridge_module):
-        assert (
-            bridge_module.subject_family("sea.governance.decision.accepted")
-            == "sea.governance.decision"
-        )
+        assert bridge_module.subject_family("sea.governance.decision.accepted") == "sea.governance.decision"
 
     def test_memory_write(self, bridge_module):
-        assert (
-            bridge_module.subject_family("sea.memory.write.fact") == "sea.memory.write"
-        )
+        assert bridge_module.subject_family("sea.memory.write.fact") == "sea.memory.write"
 
     def test_memory_lifecycle(self, bridge_module):
-        assert (
-            bridge_module.subject_family("sea.memory.lifecycle.accepted")
-            == "sea.memory.lifecycle"
-        )
+        assert bridge_module.subject_family("sea.memory.lifecycle.accepted") == "sea.memory.lifecycle"
 
     def test_short_subject(self, bridge_module):
         """Subjects with fewer than 3 parts are returned as-is."""
         assert bridge_module.subject_family("sea.agent") == "sea.agent"
 
     def test_deeply_nested_subject(self, bridge_module):
-        assert (
-            bridge_module.subject_family("sea.agent.event.created.sub.event")
-            == "sea.agent.event"
-        )
+        assert bridge_module.subject_family("sea.agent.event.created.sub.event") == "sea.agent.event"
 
 
 class TestCanonicalRoutes:

@@ -6,12 +6,12 @@ This document defines the canonical event contract for the SEA (Supervised Event
 
 ### Audience
 
-| Consumer | Role |
-|----------|------|
-| SEA Forge | Produces governance requests and memory writes; consumes governance decisions |
-| ZeroClaw | Consumes governance requests; produces governance decisions; reads memory |
-| Home Assistant automations | Produces agent events and memory writes via the addon API |
-| MCP ecosystems | Produces and consumes events through the MCP bridge adapter |
+| Consumer                   | Role                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| SEA Forge                  | Produces governance requests and memory writes; consumes governance decisions |
+| ZeroClaw                   | Consumes governance requests; produces governance decisions; reads memory     |
+| Home Assistant automations | Produces agent events and memory writes via the addon API                     |
+| MCP ecosystems             | Produces and consumes events through the MCP bridge adapter                   |
 
 ### Core Principle
 
@@ -44,32 +44,32 @@ All five event types share this envelope structure. Fields are top-level keys in
 
 ### Field Reference
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `schema_version` | `string` | Yes | Version of the envelope schema. Must be `"v1"`. Gates which validation logic the bridge applies. |
-| `event_id` | `string (UUID v4)` | Yes | Globally unique identifier for this event. Used as the canonical event identifier in all downstream tables. |
-| `idempotency_key` | `string` | No | Deduplication key. Defaults to `event_id` when absent. See Section 6. |
-| `source` | `string (enum)` | Yes | Originating system. One of: `zeroclaw`, `sea-forge`, `home-assistant`, `other`. |
-| `source_agent` | `string` | Yes | Specific agent or component within the source system. Free-form. Example: `zeroclaw/refactor-agent`. |
-| `occurred_at` | `string (RFC 3339)` | Yes | Timestamp when the event occurred in the source system. Nanosecond precision preferred. Must be UTC. |
-| `correlation_id` | `string` | No | Groups related events across different subjects. See Section 7. |
-| `causation_id` | `string` | No | Direct parent event ID. Answers "what caused this event to exist." See Section 7. |
-| `trace_id` | `string` | No | Distributed trace identifier spanning the full causal chain. See Section 7. |
-| `payload` | `object` | Yes | Subject-specific event data. Structure depends on the event type. Must not be null. |
-| `provenance` | `object` | No | Provenance metadata. May include `lineage`, `policy_version`, `identity_ref`, or other traceability data. |
-| `metadata` | `object` | No | Arbitrary metadata for observability, debugging, or operational annotations. Not used for governance logic. |
+| Field             | Type                | Required | Description                                                                                                 |
+| ----------------- | ------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `schema_version`  | `string`            | Yes      | Version of the envelope schema. Must be `"v1"`. Gates which validation logic the bridge applies.            |
+| `event_id`        | `string (UUID v4)`  | Yes      | Globally unique identifier for this event. Used as the canonical event identifier in all downstream tables. |
+| `idempotency_key` | `string`            | No       | Deduplication key. Defaults to `event_id` when absent. See Section 6.                                       |
+| `source`          | `string (enum)`     | Yes      | Originating system. One of: `zeroclaw`, `sea-forge`, `home-assistant`, `other`.                             |
+| `source_agent`    | `string`            | Yes      | Specific agent or component within the source system. Free-form. Example: `zeroclaw/refactor-agent`.        |
+| `occurred_at`     | `string (RFC 3339)` | Yes      | Timestamp when the event occurred in the source system. Nanosecond precision preferred. Must be UTC.        |
+| `correlation_id`  | `string`            | No       | Groups related events across different subjects. See Section 7.                                             |
+| `causation_id`    | `string`            | No       | Direct parent event ID. Answers "what caused this event to exist." See Section 7.                           |
+| `trace_id`        | `string`            | No       | Distributed trace identifier spanning the full causal chain. See Section 7.                                 |
+| `payload`         | `object`            | Yes      | Subject-specific event data. Structure depends on the event type. Must not be null.                         |
+| `provenance`      | `object`            | No       | Provenance metadata. May include `lineage`, `policy_version`, `identity_ref`, or other traceability data.   |
+| `metadata`        | `object`            | No       | Arbitrary metadata for observability, debugging, or operational annotations. Not used for governance logic. |
 
 ---
 
 ## 3. Subject Taxonomy
 
-| Subject Pattern | Schema File | Canonical Table | Fail Behavior |
-|-----------------|-------------|-----------------|---------------|
-| `sea.agent.event.>` | `sea.agent.event.v1.json` | `event_log.agent_events` | fail-open |
-| `sea.governance.request.>` | `sea.governance.request.v1.json` | `governance.action_requests` | fail-closed |
-| `sea.governance.decision.>` | `sea.governance.decision.v1.json` | `governance.action_decisions` | fail-closed |
-| `sea.memory.write.>` | `sea.memory.write.v1.json` | `memory.items` (status=`candidate`) | fail-closed |
-| `sea.memory.lifecycle.>` | `sea.memory.lifecycle.v1.json` | `event_log.inbox_events` | fail-closed |
+| Subject Pattern             | Schema File                       | Canonical Table                     | Fail Behavior |
+| --------------------------- | --------------------------------- | ----------------------------------- | ------------- |
+| `sea.agent.event.>`         | `sea.agent.event.v1.json`         | `event_log.agent_events`            | fail-open     |
+| `sea.governance.request.>`  | `sea.governance.request.v1.json`  | `governance.action_requests`        | fail-closed   |
+| `sea.governance.decision.>` | `sea.governance.decision.v1.json` | `governance.action_decisions`       | fail-closed   |
+| `sea.memory.write.>`        | `sea.memory.write.v1.json`        | `memory.items` (status=`candidate`) | fail-closed   |
+| `sea.memory.lifecycle.>`    | `sea.memory.lifecycle.v1.json`    | `event_log.inbox_events`            | fail-closed   |
 
 The `>` wildcard in subject patterns indicates that one or more trailing tokens are permitted. Producers typically append an agent identifier or request identifier. Example: `sea.agent.event.zeroclaw.refactor-agent`.
 
@@ -79,33 +79,33 @@ The `>` wildcard in subject patterns indicates that one or more trailing tokens 
 
 ### 4.1 Agent Event
 
-| Property | Value |
-|----------|-------|
-| Subject pattern | `sea.agent.event.>` |
-| Fail behavior | fail-open |
+| Property        | Value                    |
+| --------------- | ------------------------ |
+| Subject pattern | `sea.agent.event.>`      |
+| Fail behavior   | fail-open                |
 | Canonical table | `event_log.agent_events` |
 
 **Required envelope fields:** All common envelope fields.
 
 **Required payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `event_type` | `string` | Category of agent activity. Example: `tool_invocation`, `file_mutation`, `command_execution`. |
-| `description` | `string` | Human-readable summary of what occurred. |
-| `agent_identity` | `string` | Identity reference for the agent that performed the action. |
+| Field            | Type     | Description                                                                                   |
+| ---------------- | -------- | --------------------------------------------------------------------------------------------- |
+| `event_type`     | `string` | Category of agent activity. Example: `tool_invocation`, `file_mutation`, `command_execution`. |
+| `description`    | `string` | Human-readable summary of what occurred.                                                      |
+| `agent_identity` | `string` | Identity reference for the agent that performed the action.                                   |
 
 **Optional payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `tool_name` | `string` | Name of the tool invoked, if applicable. |
-| `parameters` | `object` | Input parameters to the tool or action. |
-| `result_summary` | `string` | Brief description of the outcome. |
-| `file_paths` | `array[string]` | Files affected by the action. |
-| `exit_code` | `integer` | Exit or return code if the action produced one. |
-| `duration_ms` | `integer` | Duration of the action in milliseconds. |
-| `tags` | `array[string]` | Free-form tags for categorization. |
+| Field            | Type            | Description                                     |
+| ---------------- | --------------- | ----------------------------------------------- |
+| `tool_name`      | `string`        | Name of the tool invoked, if applicable.        |
+| `parameters`     | `object`        | Input parameters to the tool or action.         |
+| `result_summary` | `string`        | Brief description of the outcome.               |
+| `file_paths`     | `array[string]` | Files affected by the action.                   |
+| `exit_code`      | `integer`       | Exit or return code if the action produced one. |
+| `duration_ms`    | `integer`       | Duration of the action in milliseconds.         |
+| `tags`           | `array[string]` | Free-form tags for categorization.              |
 
 **Example:**
 
@@ -149,33 +149,25 @@ The `>` wildcard in subject patterns indicates that one or more trailing tokens 
 
 ### 4.2 Governance Request
 
-| Property | Value |
-|----------|-------|
-| Subject pattern | `sea.governance.request.>` |
-| Fail behavior | fail-closed |
+| Property        | Value                        |
+| --------------- | ---------------------------- |
+| Subject pattern | `sea.governance.request.>`   |
+| Fail behavior   | fail-closed                  |
 | Canonical table | `governance.action_requests` |
 
 **Required envelope fields:** All common envelope fields.
 
 **Required payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `action_type` | `string` | Category of action requesting admission. Example: `file_mutation`, `command_execution`, `memory_promotion`. |
-| `action_description` | `string` | Human-readable description of the proposed action. |
-| `requester_identity` | `string` | Identity reference of the agent requesting admission. |
-| `target` | `string` | What the action targets. A file path, entity ID, memory reference, or similar. |
-| `proposed_content` | `object` | The content or payload of the proposed action. Structure depends on `action_type`. |
+- `requesting_identity_id` (`string`): UUID of the identity requesting the action. Must reference an existing governance identity.
+- `requested_action_type` (`string`, enum): Type of governed action being requested. One of: `tool_call`, `memory_write`, `file_write`, `network_request`, `email_send`, `command_execute`, `policy_override_request`.
 
 **Optional payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `risk_level` | `string` | Self-assessed risk level: `low`, `medium`, `high`, `critical`. |
-| `justification` | `string` | Reasoning for why this action should be admitted. |
-| `constraints` | `object` | Constraints or guardrails that should be enforced. |
-| `dry_run` | `boolean` | If `true`, evaluate the request without executing. Defaults to `false`. |
-| `policy_overrides` | `object` | Requested policy overrides. Must be explicitly admitted by governance. |
+- `requested_resource` (`string`): Resource identifier the action targets. A file path, URL, tool name, or similar.
+- `payload` (`object`): Action-specific parameters for the requested action.
+- `provenance` (`object`): Request-level provenance metadata such as origin and causal chain.
+- `metadata` (`object`): Additional request metadata.
 
 **Example:**
 
@@ -191,18 +183,23 @@ The `>` wildcard in subject patterns indicates that one or more trailing tokens 
   "causation_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
   "trace_id": "trace-xyz-456",
   "payload": {
-    "action_type": "file_mutation",
-    "action_description": "Write updated configuration to /etc/agent/config.yaml",
-    "requester_identity": "zeroclaw/refactor-agent@v2.1",
-    "target": "/etc/agent/config.yaml",
-    "proposed_content": {
+    "requesting_identity_id": "33333333-3333-3333-3333-333333333333",
+    "requested_action_type": "file_write",
+    "requested_resource": "/etc/agent/config.yaml",
+    "payload": {
       "path": "/etc/agent/config.yaml",
       "content_sha256": "e3b0c44298fc1c149afbf4c8996fb924",
       "size_bytes": 2048
     },
-    "risk_level": "medium",
-    "justification": "Approved configuration change from session-abc-123 planning phase",
-    "dry_run": false
+    "provenance": {
+      "origin": "session-abc-123",
+      "chain": ["session-abc-123", "plan-0042"]
+    },
+    "metadata": {
+      "risk_level": "medium",
+      "justification": "Approved configuration change from session-abc-123 planning phase",
+      "dry_run": false
+    }
   },
   "provenance": {
     "lineage": ["session-abc-123"],
@@ -216,32 +213,32 @@ The `>` wildcard in subject patterns indicates that one or more trailing tokens 
 
 ### 4.3 Governance Decision
 
-| Property | Value |
-|----------|-------|
-| Subject pattern | `sea.governance.decision.>` |
-| Fail behavior | fail-closed |
+| Property        | Value                         |
+| --------------- | ----------------------------- |
+| Subject pattern | `sea.governance.decision.>`   |
+| Fail behavior   | fail-closed                   |
 | Canonical table | `governance.action_decisions` |
 
 **Required envelope fields:** All common envelope fields.
 
 **Required payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `request_event_id` | `string` | The `event_id` of the governance request this decision resolves. |
-| `decision` | `string (enum)` | Admission decision. One of: `accepted`, `rejected`, `deferred`. |
-| `decider_identity` | `string` | Identity reference of the governance component that made the decision. |
-| `reason` | `string` | Machine-readable reason code. Example: `policy_match`, `policy_violation`, `risk_threshold_exceeded`. |
-| `policy_version` | `string` | Version of the policy that governed this decision. |
+| Field              | Type            | Description                                                                                           |
+| ------------------ | --------------- | ----------------------------------------------------------------------------------------------------- |
+| `request_event_id` | `string`        | The `event_id` of the governance request this decision resolves.                                      |
+| `decision`         | `string (enum)` | Admission decision. One of: `accepted`, `rejected`, `deferred`.                                       |
+| `decider_identity` | `string`        | Identity reference of the governance component that made the decision.                                |
+| `reason`           | `string`        | Machine-readable reason code. Example: `policy_match`, `policy_violation`, `risk_threshold_exceeded`. |
+| `policy_version`   | `string`        | Version of the policy that governed this decision.                                                    |
 
 **Optional payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `human_readable_reason` | `string` | Human-facing explanation of the decision. |
-| `conditions` | `array[object]` | Conditions attached to an `accepted` decision. Each object has `type` and `value` keys. |
-| `expires_at` | `string (RFC 3339)` | When this decision expires. Null means no expiration. |
-| `related_decisions` | `array[string]` | Event IDs of related prior decisions that influenced this one. |
+| Field                   | Type                | Description                                                                             |
+| ----------------------- | ------------------- | --------------------------------------------------------------------------------------- |
+| `human_readable_reason` | `string`            | Human-facing explanation of the decision.                                               |
+| `conditions`            | `array[object]`     | Conditions attached to an `accepted` decision. Each object has `type` and `value` keys. |
+| `expires_at`            | `string (RFC 3339)` | When this decision expires. Null means no expiration.                                   |
+| `related_decisions`     | `array[string]`     | Event IDs of related prior decisions that influenced this one.                          |
 
 **Example:**
 
@@ -283,34 +280,34 @@ The `>` wildcard in subject patterns indicates that one or more trailing tokens 
 
 ### 4.4 Memory Write
 
-| Property | Value |
-|----------|-------|
-| Subject pattern | `sea.memory.write.>` |
-| Fail behavior | fail-closed |
+| Property        | Value                               |
+| --------------- | ----------------------------------- |
+| Subject pattern | `sea.memory.write.>`                |
+| Fail behavior   | fail-closed                         |
 | Canonical table | `memory.items` (status=`candidate`) |
 
 **Required envelope fields:** All common envelope fields.
 
 **Required payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `memory_type` | `string` | Category of memory. Example: `observation`, `fact`, `procedure`, `preference`, `context`. |
-| `content` | `string` | The memory content. Text, structured text, or a JSON-serializable string. |
-| `source_identity` | `string` | Identity reference of the agent or system that produced this memory. |
-| `scope` | `string` | Visibility scope. One of: `private`, `shared`, `global`. |
+| Field             | Type     | Description                                                                               |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `memory_type`     | `string` | Category of memory. Example: `observation`, `fact`, `procedure`, `preference`, `context`. |
+| `content`         | `string` | The memory content. Text, structured text, or a JSON-serializable string.                 |
+| `source_identity` | `string` | Identity reference of the agent or system that produced this memory.                      |
+| `scope`           | `string` | Visibility scope. One of: `private`, `shared`, `global`.                                  |
 
 **Optional payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `summary` | `string` | Short summary of the content for quick retrieval. |
-| `tags` | `array[string]` | Free-form tags for categorization and filtering. |
-| `confidence` | `number (0.0–1.0)` | Confidence score for the memory's accuracy or relevance. |
-| `valid_from` | `string (RFC 3339)` | When this memory becomes valid. Defaults to `occurred_at`. |
-| `valid_until` | `string (RFC 3339)` | When this memory expires. Null means no expiration. |
-| `related_memory_ids` | `array[string]` | IDs of related memories already in the system. |
-| `embedding_hint` | `string` | Hint text for embedding generation. If absent, `content` is used. |
+| Field                | Type                | Description                                                       |
+| -------------------- | ------------------- | ----------------------------------------------------------------- |
+| `summary`            | `string`            | Short summary of the content for quick retrieval.                 |
+| `tags`               | `array[string]`     | Free-form tags for categorization and filtering.                  |
+| `confidence`         | `number (0.0–1.0)`  | Confidence score for the memory's accuracy or relevance.          |
+| `valid_from`         | `string (RFC 3339)` | When this memory becomes valid. Defaults to `occurred_at`.        |
+| `valid_until`        | `string (RFC 3339)` | When this memory expires. Null means no expiration.               |
+| `related_memory_ids` | `array[string]`     | IDs of related memories already in the system.                    |
+| `embedding_hint`     | `string`            | Hint text for embedding generation. If absent, `content` is used. |
 
 **Example:**
 
@@ -354,32 +351,32 @@ Memory writes always enter the system with status `candidate`. Promotion to `acc
 
 ### 4.5 Memory Lifecycle
 
-| Property | Value |
-|----------|-------|
+| Property        | Value                    |
+| --------------- | ------------------------ |
 | Subject pattern | `sea.memory.lifecycle.>` |
-| Fail behavior | fail-closed |
+| Fail behavior   | fail-closed              |
 | Canonical table | `event_log.inbox_events` |
 
 **Required envelope fields:** All common envelope fields.
 
 **Required payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `target_memory_id` | `string` | The ID of the memory item this lifecycle event applies to. Must reference an existing memory item. |
-| `transition` | `string (enum)` | Lifecycle transition. One of: `candidate→accepted`, `accepted→verified`, `verified→superseded`, `candidate→rejected`, `accepted→expired`. |
-| `actor_identity` | `string` | Identity reference of the agent or system performing the transition. |
-| `reason` | `string` | Machine-readable reason code for the transition. Example: `governance_approved`, `verification_passed`, `superseded_by_newer`, `ttl_expired`. |
+| Field              | Type            | Description                                                                                                                                   |
+| ------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `target_memory_id` | `string`        | The ID of the memory item this lifecycle event applies to. Must reference an existing memory item.                                            |
+| `transition`       | `string (enum)` | Lifecycle transition. One of: `candidate→accepted`, `accepted→verified`, `verified→superseded`, `candidate→rejected`, `accepted→expired`.     |
+| `actor_identity`   | `string`        | Identity reference of the agent or system performing the transition.                                                                          |
+| `reason`           | `string`        | Machine-readable reason code for the transition. Example: `governance_approved`, `verification_passed`, `superseded_by_newer`, `ttl_expired`. |
 
 **Optional payload fields:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `human_readable_reason` | `string` | Human-facing explanation of the transition. |
-| `superseding_memory_id` | `string` | For `superseded` transitions, the ID of the memory that replaces this one. |
-| `verification_method` | `string` | For `verified` transitions, how verification was performed. Example: `cross_reference`, `human_review`, `automated_check`. |
-| `policy_version` | `string` | Policy version governing this transition. |
-| `evidence` | `array[object]` | Supporting evidence for the transition. Each object has `type`, `source`, and `value` keys. |
+| Field                   | Type            | Description                                                                                                                |
+| ----------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `human_readable_reason` | `string`        | Human-facing explanation of the transition.                                                                                |
+| `superseding_memory_id` | `string`        | For `superseded` transitions, the ID of the memory that replaces this one.                                                 |
+| `verification_method`   | `string`        | For `verified` transitions, how verification was performed. Example: `cross_reference`, `human_review`, `automated_check`. |
+| `policy_version`        | `string`        | Policy version governing this transition.                                                                                  |
+| `evidence`              | `array[object]` | Supporting evidence for the transition. Each object has `type`, `source`, and `value` keys.                                |
 
 **Example:**
 
@@ -458,12 +455,12 @@ If the event does not match the schema exactly as published, it is rejected.
 
 The bridge resolves the deduplication key (used as `message_id` in the inbox) in the following priority order:
 
-| Priority | Source | Description |
-|----------|--------|-------------|
-| 1 | `idempotency_key` from envelope | Explicit producer-supplied key. |
-| 2 | `event_id` from envelope | Falls back to the event UUID. |
-| 3 | `Nats-Msg-Id` NATS header | Falls back to the NATS message ID header. |
-| 4 | SHA-256 hash of message body | Last resort deterministic hash. |
+| Priority | Source                          | Description                               |
+| -------- | ------------------------------- | ----------------------------------------- |
+| 1        | `idempotency_key` from envelope | Explicit producer-supplied key.           |
+| 2        | `event_id` from envelope        | Falls back to the event UUID.             |
+| 3        | `Nats-Msg-Id` NATS header       | Falls back to the NATS message ID header. |
+| 4        | SHA-256 hash of message body    | Last resort deterministic hash.           |
 
 ### Deduplication Mechanism
 
@@ -510,11 +507,11 @@ Example: A trace that starts in Home Assistant, flows through ZeroClaw governanc
 
 ### Relationship Summary
 
-| Field | Cardinality | Scope | Answers |
-|-------|-------------|-------|---------|
-| `correlation_id` | One-to-many | Logical operation | "What group does this belong to?" |
-| `causation_id` | One-to-one | Direct parent | "What caused this specific event?" |
-| `trace_id` | One-to-many | Distributed trace | "What end-to-end flow does this belong to?" |
+| Field            | Cardinality | Scope             | Answers                                     |
+| ---------------- | ----------- | ----------------- | ------------------------------------------- |
+| `correlation_id` | One-to-many | Logical operation | "What group does this belong to?"           |
+| `causation_id`   | One-to-one  | Direct parent     | "What caused this specific event?"          |
+| `trace_id`       | One-to-many | Distributed trace | "What end-to-end flow does this belong to?" |
 
 ---
 
@@ -526,13 +523,13 @@ The `schema_version` field in the envelope determines which validation logic the
 
 ### Evolution Rules
 
-| Rule | Rationale |
-|------|-----------|
-| New schema versions are additive | `v2` must accept all valid `v1` payloads. New fields are optional. |
-| Unknown versions are rejected | If the bridge does not recognize the `schema_version`, the event is rejected (fail-closed for all types). |
-| Existing fields must not change meaning | A field documented as `string` in `v1` cannot become `integer` in `v2`. Rename or add new fields instead. |
-| `additionalProperties: false` on envelope | Unknown top-level envelope fields cause rejection. This prevents producers from silently extending the envelope. |
-| `additionalProperties: true` on payload | Payload objects tolerate additional fields. This allows producers to attach domain-specific data without schema changes. |
+| Rule                                      | Rationale                                                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| New schema versions are additive          | `v2` must accept all valid `v1` payloads. New fields are optional.                                                       |
+| Unknown versions are rejected             | If the bridge does not recognize the `schema_version`, the event is rejected (fail-closed for all types).                |
+| Existing fields must not change meaning   | A field documented as `string` in `v1` cannot become `integer` in `v2`. Rename or add new fields instead.                |
+| `additionalProperties: false` on envelope | Unknown top-level envelope fields cause rejection. This prevents producers from silently extending the envelope.         |
+| `additionalProperties: true` on payload   | Payload objects tolerate additional fields. This allows producers to attach domain-specific data without schema changes. |
 
 ### Adding a New Version
 
@@ -554,13 +551,13 @@ JSON Schema files are located at:
 agent_memory_ledger/rootfs/usr/share/agent_memory_ledger/contracts/
 ```
 
-| File | `$id` URI | Event Type |
-|------|-----------|------------|
-| `sea.agent.event.v1.json` | `https://sea.local/schemas/sea.agent.event.v1.json` | Agent Event |
-| `sea.governance.request.v1.json` | `https://sea.local/schemas/sea.governance.request.v1.json` | Governance Request |
+| File                              | `$id` URI                                                   | Event Type          |
+| --------------------------------- | ----------------------------------------------------------- | ------------------- |
+| `sea.agent.event.v1.json`         | `https://sea.local/schemas/sea.agent.event.v1.json`         | Agent Event         |
+| `sea.governance.request.v1.json`  | `https://sea.local/schemas/sea.governance.request.v1.json`  | Governance Request  |
 | `sea.governance.decision.v1.json` | `https://sea.local/schemas/sea.governance.decision.v1.json` | Governance Decision |
-| `sea.memory.write.v1.json` | `https://sea.local/schemas/sea.memory.write.v1.json` | Memory Write |
-| `sea.memory.lifecycle.v1.json` | `https://sea.local/schemas/sea.memory.lifecycle.v1.json` | Memory Lifecycle |
+| `sea.memory.write.v1.json`        | `https://sea.local/schemas/sea.memory.write.v1.json`        | Memory Write        |
+| `sea.memory.lifecycle.v1.json`    | `https://sea.local/schemas/sea.memory.lifecycle.v1.json`    | Memory Lifecycle    |
 
 Each schema file defines both the envelope constraints and the subject-specific payload constraints. The `$schema` field in each file points to JSON Schema Draft 2020-12.
 
@@ -607,6 +604,6 @@ Invalid events are ACKed (not NACKed) to NATS. This is intentional. NACKing woul
 
 ## 11. Version History
 
-| Version | Date | Description |
-|---------|------|-------------|
-| v1 | 2026-05-18 | Initial contract. Defines envelope, five event types, fail-closed semantics, idempotency, causal tracing, and schema evolution rules. |
+| Version | Date       | Description                                                                                                                           |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| v1      | 2026-05-18 | Initial contract. Defines envelope, five event types, fail-closed semantics, idempotency, causal tracing, and schema evolution rules. |

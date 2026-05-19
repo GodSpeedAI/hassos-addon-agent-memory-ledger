@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://godspeed.ai/contracts/sea.agent.event.v1.json",
   "title": "SEA Agent Event v1",
-  "description": "Canonical agent event envelope for SEA Forge / ZeroClaw integration. Raw agent events are append-only observations. Fail-open: missing optional fields produce warnings, not rejections.",
+  "description": "Canonical agent event envelope for SEA Forge / ZeroClaw integration. Raw agent events are append-only observations. Fail-open applies to optional event semantics, but this schema still rejects unknown top-level envelope properties via additionalProperties=false.",
   "type": "object",
   "required": [
     "schema_version",
@@ -28,7 +28,12 @@
     },
     "source": {
       "type": "string",
-      "enum": ["zeroclaw", "sea-forge", "home-assistant", "other"],
+      "enum": [
+        "zeroclaw",
+        "sea-forge",
+        "home-assistant",
+        "other"
+      ],
       "description": "Originating system."
     },
     "source_agent": {
@@ -68,10 +73,14 @@
       "type": "object",
       "description": "Provenance metadata: who, what, where, why.",
       "properties": {
-        "origin": { "type": "string" },
+        "origin": {
+          "type": "string"
+        },
         "chain": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
