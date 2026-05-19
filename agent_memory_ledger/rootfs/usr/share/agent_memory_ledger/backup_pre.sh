@@ -1,17 +1,17 @@
 #!/command/with-contenv bashio
 # ==============================================================================
-# Home Assistant Add-on: TimescaleDb
-# Pre-backup script - Creates a SQL dump before Home Assistant backup runs
+# Home Assistant Add-on: Agent Memory Ledger
+# Pre-backup script - Creates a compressed SQL dump before Home Assistant backup
 # ==============================================================================
 declare BACKUP_FILE
 
-BACKUP_FILE="/data/backup_db.sql"
+BACKUP_FILE="/data/backup_db.sql.gz"
 
 bashio::log.info "Starting pre-backup process..."
 
 # Check if postgres is running by trying to connect
 if pg_isready -U postgres -h localhost -p 5432 >/dev/null 2>&1; then
-	bashio::log.info "PostgreSQL is running, creating database dump..."
+	bashio::log.info "PostgreSQL is running, creating compressed database dump..."
 
 	# Remove old backup file if it exists
 	if [[ -f "${BACKUP_FILE}" ]]; then
@@ -24,7 +24,7 @@ if pg_isready -U postgres -h localhost -p 5432 >/dev/null 2>&1; then
 	chown postgres:postgres "${BACKUP_FILE}"
 	chmod 600 "${BACKUP_FILE}"
 
-	# Create the SQL dump.
+	# Create the compressed SQL dump.
 	BACKUP_OPTS="-U postgres --clean --if-exists"
 	EXCLUDE_EMBEDDINGS=false
 
@@ -36,12 +36,13 @@ if pg_isready -U postgres -h localhost -p 5432 >/dev/null 2>&1; then
 	fi
 
 	if bashio::var.true "${EXCLUDE_EMBEDDINGS}"; then
-		if su - postgres -c "pg_dumpall ${BACKUP_OPTS} --globals-only -f ${BACKUP_FILE}"; then
+		# Dump globals first, then each database without embeddings schema
+		if su - postgres -c "pg_dumpall ${BACKUP_OPTS} --globals-only" | gzip >"${BACKUP_FILE}"; then
 			DATABASES=$(su - postgres -c "psql -U postgres -t -A -c \"SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate ORDER BY datname;\"")
 			while IFS= read -r database; do
 				[[ -z "${database}" ]] && continue
 				bashio::log.debug "Dumping database '${database}' without embeddings schema..."
-				if ! su - postgres -c "pg_dump ${BACKUP_OPTS} --exclude-schema=embeddings -d \"${database}\" >> ${BACKUP_FILE}"; then
+				if ! su - postgres -c "pg_dump ${BACKUP_OPTS} --exclude-schema=embeddings -d \"${database}\"" | gzip >>"${BACKUP_FILE}"; then
 					bashio::log.error "Failed to dump database '${database}'!"
 					exit 1
 				fi
@@ -50,14 +51,14 @@ if pg_isready -U postgres -h localhost -p 5432 >/dev/null 2>&1; then
 		else
 			DUMP_CREATED=false
 		fi
-	elif su - postgres -c "pg_dumpall ${BACKUP_OPTS} -f ${BACKUP_FILE}"; then
+	elif su - postgres -c "pg_dumpall ${BACKUP_OPTS}" | gzip >"${BACKUP_FILE}"; then
 		DUMP_CREATED=true
 	else
 		DUMP_CREATED=false
 	fi
 
 	if bashio::var.true "${DUMP_CREATED}"; then
-		bashio::log.info "Database dump created successfully at ${BACKUP_FILE}"
+		bashio::log.info "Compressed database dump created successfully at ${BACKUP_FILE}"
 
 		# Set proper permissions
 		chmod 600 "${BACKUP_FILE}"
@@ -65,7 +66,7 @@ if pg_isready -U postgres -h localhost -p 5432 >/dev/null 2>&1; then
 
 		# Log file size for verification
 		BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
-		bashio::log.info "Backup file size: ${BACKUP_SIZE}"
+		bashio::log.info "Backup file size: ${BACKUP_SIZE} (compressed)"
 	else
 		bashio::log.error "Failed to create database dump!"
 		exit 1

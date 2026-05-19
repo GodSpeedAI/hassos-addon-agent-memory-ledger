@@ -1,5 +1,6 @@
 
-FROM timescale/timescaledb:latest-pg17 AS timescale-pg17
+# Pinning to match main Dockerfile timescale version (2.26.4)
+FROM timescale/timescaledb:2.26.4-pg17 AS timescale-pg17
 
 # --------------------------------------
 # PostGIS - Build and install OLD Postgis (for upgrade reasons)

@@ -1,8 +1,10 @@
-# Copilot Instructions for Home Assistant Agent Memory Ledger Addon
+# Copilot Instructions for Agent Memory Ledger
 
 ## Read This First
 
-This repository is a Home Assistant addon that provides PostgreSQL, TimescaleDB, RuVector, Oxigraph,and governed agent-memory infrastructure.
+This repository implements **Agent Memory Ledger** — a local-first persistence,
+governance, memory, and event-bridge substrate for SEA Forge and ZeroClaw
+governed agent runtimes. It runs as a Home Assistant add-on.
 
 Copilot suggestions must preserve the repository's core invariant:
 
@@ -10,7 +12,12 @@ Copilot suggestions must preserve the repository's core invariant:
 canonical_history != derived_state
 ```
 
-Raw events are canonical. Embeddings, summaries, projections, dashboards, and audit views are derived. Do not replace canonical history with derived artifacts.
+Raw events are canonical. Embeddings, summaries, projections, dashboards, and
+audit views are derived. Do not replace canonical history with derived artifacts.
+
+PostgreSQL is the canonical source of truth. NATS JetStream is transport and
+replay surface. Oxigraph is a rebuildable projection. RuVector embeddings are
+derived retrieval artifacts.
 
 ## Architectural Priorities
 
@@ -37,6 +44,10 @@ Performance improvements must not weaken replayability, provenance, or auditabil
 - `agent_memory_ledger/rootfs/etc/s6-overlay/s6-rc.d/`: s6-overlay service definitions.
 - `agent_memory_ledger/rootfs/usr/share/agent_memory_ledger/`: PostgreSQL initialization, tuning, backup, restore, and validation scripts.
 - `agent_memory_ledger/rootfs/usr/share/agent_memory_ledger/agent_memory/`: governed memory, governance, inbox/outbox, replay, audit, and identity SQL modules.
+- `agent_memory_ledger/rootfs/usr/share/agent_memory_ledger/contracts/`: SEA Event Contract JSON Schema files for envelope validation.
+- `agent_memory_ledger/rootfs/usr/bin/sea_nats_bridge.py`: SEA Forge NATS JetStream bridge worker.
+- `tests/`: pytest test suite (168 tests, pure unit tests with mocks).
+- `docs/SEA_EVENT_CONTRACT.md`: formal event contract specification.
 
 Follow nearby file patterns before introducing new conventions.
 
@@ -84,6 +95,35 @@ A -> B -> C -> A
 ```
 
 Prefer explicit, queryable state over implicit behavior hidden in scripts or application logic.
+
+## SEA Forge Bridge Rules
+
+The bridge (`sea_nats_bridge.py`) connects PostgreSQL to NATS JetStream.
+
+Key constraints:
+
+- PostgreSQL is canonical. JetStream is transport, not authority.
+- Uses `nats-py` with JetStream (NOT legacy NATS Streaming).
+- Inbound messages are validated against JSON Schema contracts in `contracts/`.
+- Governance subjects fail closed. Agent event subjects fail open.
+- The `bridge_worker` DB role has least-privilege grants.
+- Outbound uses `FOR UPDATE SKIP LOCKED` on `event_log.outbox_events`.
+- Dead-letter routing goes to `sea.ledger.deadletter` via core NATS.
+
+When modifying the bridge:
+
+1. Update tests in `tests/` (168 tests across 6 modules).
+2. Run `ruff check` on the bridge source and tests.
+3. Verify the event contract if envelope validation changes.
+4. Ensure `bridge_worker` role grants remain least-privilege.
+
+### Key nats-py API Notes
+
+- `add_stream()` / `add_consumer()` — NOT `create_stream()` / `create_consumer()`
+- `reconnect_time_wait` — NOT `reconnect_wait`
+- Pull consumer: `sub = await js.pull_subscribe()` then `msgs = await sub.fetch()`
+- psycopg returns JSONB as `dict` (auto-deserialized), not `str`
+- `js.publish()` raises `NoStreamResponseError` when subject not in stream
 
 ## SQL and Migration Guidance
 
@@ -144,13 +184,36 @@ Use `timescaledb-tune` only where it respects container limits and Home Assistan
 
 ## Testing Expectations
 
+The test suite contains 168 pure unit tests across 6 modules:
+
+| Module | Tests | Coverage area |
+|---|---|---|
+| `test_subject_routing.py` | 21 | Subject family extraction, canonical route mapping, message ID derivation |
+| `test_envelope_validation.py` | 47 | Envelope validation, payload validation, contract validation, fail-open/fail-closed |
+| `test_bridge.py` | 17 | Inbound processing, idempotency, transactionality, outbound dispatch |
+| `test_health.py` | 15 | `/healthz`, `/readyz`, `/metrics-lite`, HTTP routing |
+| `test_sql_schema.py` | 55 | SQL schema smoke tests, least-privilege role grants, constraint validation |
+| `test_config.py` | 5 | BridgeConfig defaults, env loading, DSN construction |
+
+Run with:
+
+```bash
+python -m pytest tests/ -v
+```
+
+Lint with:
+
+```bash
+ruff check agent_memory_ledger/rootfs/usr/bin/sea_nats_bridge.py tests/
+```
+
 For SQL or governance changes, prefer tests or validation scripts that prove:
 
 - identity can be reconstructed at time T
 - active policy can be reconstructed at time T
 - action admission decisions can be replayed
 - identity lineage remains acyclic
-- duplicate events are rejected or handled idempotently
+- duplicate events are rejected or handled idempotically
 - migrations can run more than once safely
 
 For addon behavior, verify initialization, service startup and shutdown, configuration validation, extension loading, backup, and restore paths where affected.
@@ -167,7 +230,8 @@ Documentation should explain:
 - how replayability and provenance are preserved
 - operational tradeoffs
 
-Use direct technical language. Avoid marketing phrasing.
+Use direct technical language. Avoid marketing phrasing. This is complex by design
+because SEA Forge is complex. Be honest about complexity.
 
 ## Completion Checklist
 
@@ -181,3 +245,6 @@ Before suggesting a completed change, confirm:
 - addon configuration and documentation match behavior
 - shell scripts use bashio conventions
 - affected validation scripts or tests are updated
+- bridge changes include corresponding test updates
+- event contract changes are reflected in JSON Schema files
+- `bridge_worker` role grants remain least-privilege

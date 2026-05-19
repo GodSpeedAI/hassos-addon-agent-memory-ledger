@@ -16,6 +16,51 @@
       "datasourceTemplate": "docker"
     },
     {
+      "fileMatch": ["Dockerfile$"],
+      "matchStringsStrategy": "any",
+      "matchStrings": [
+        "FROM timescale/timescaledb:(?<currentValue>[0-9.]+-pg[0-9]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "timescale/timescaledb"
+    },
+    {
+      "fileMatch": ["docker-dependencies/ruvector-pg17$"],
+      "matchStringsStrategy": "any",
+      "matchStrings": [
+        "FROM rust:(?<currentValue>[0-9.]+)-slim-bookworm"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "library/rust"
+    },
+    {
+      "fileMatch": ["docker-dependencies/timescaledb-tools$"],
+      "matchStringsStrategy": "any",
+      "matchStrings": [
+        "ARG GO_VERSION=(?<currentValue>[0-9.]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "library/golang"
+    },
+    {
+      "fileMatch": ["docker-dependencies/ruvector-pg17$"],
+      "matchStringsStrategy": "any",
+      "matchStrings": [
+        "cargo install cargo-pgrx --version (?<currentValue>[0-9.]+)"
+      ],
+      "datasourceTemplate": "crate",
+      "depNameTemplate": "cargo-pgrx"
+    },
+    {
+      "fileMatch": ["docker-dependencies/timescaledb-toolkit-pg16$", "docker-dependencies/timescaledb-toolkit-pg17$"],
+      "matchStringsStrategy": "any",
+      "matchStrings": [
+        "cargo install --version '(?<currentValue>[0-9.]+)' --locked --force cargo-pgrx"
+      ],
+      "datasourceTemplate": "crate",
+      "depNameTemplate": "cargo-pgrx"
+    },
+    {
       "fileMatch": ["/Dockerfile$"],
       "matchStringsStrategy": "any",
       "matchStrings": [
@@ -24,6 +69,14 @@
       "versioningTemplate": "deb",
       "datasourceTemplate": "repology",
       "depNameTemplate": "debian_12/{{{replace 'openssh-client' 'openssh' package}}}"
+    },
+    {
+      "fileMatch": ["/Dockerfile$"],
+      "matchStrings": [
+        "ARG OXIGRAPH_VERSION=[\"']?(?<currentValue>.+?)[\"']?\\s+"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "oxigraph/oxigraph"
     },
     {
       "fileMatch": ["/Dockerfile$"],
@@ -124,6 +177,33 @@
       "matchManagers": ["pip_requirements"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
+    },
+    {
+      "matchFiles": ["agent_memory_ledger/requirements-bridge.txt"],
+      "rangeStrategy": "pin",
+      "addLabels": ["python", "bridge-worker"]
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["timescale/timescaledb"],
+      "groupName": "timescaledb",
+      "addLabels": ["docker-dependency"]
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["library/rust"],
+      "addLabels": ["docker-dependency", "ruvector"]
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["library/golang"],
+      "addLabels": ["docker-dependency", "timescaledb-tools"]
+    },
+    {
+      "matchDatasources": ["crate"],
+      "matchDepNames": ["cargo-pgrx"],
+      "groupName": "cargo-pgrx",
+      "addLabels": ["rust", "docker-dependency"]
     }
   ]
 }

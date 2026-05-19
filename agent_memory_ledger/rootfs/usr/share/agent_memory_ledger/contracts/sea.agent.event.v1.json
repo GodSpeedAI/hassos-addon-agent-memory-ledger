@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/contracts/sea.agent.event.v1.json",
+  "title": "SEA Agent Event v1",
+  "description": "Canonical agent event envelope for SEA Forge / ZeroClaw integration. Raw agent events are append-only observations. Fail-open: missing optional fields produce warnings, not rejections.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "source_agent",
+    "occurred_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Envelope schema version. Must be 'v1'."
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier (UUID v4)."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Deduplication key. If absent, event_id is used."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["zeroclaw", "sea-forge", "home-assistant", "other"],
+      "description": "Originating system."
+    },
+    "source_agent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Agent or service that produced this event."
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Event type name (e.g., 'tool_call', 'file_write')."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event occurred (RFC 3339)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlates related events across subjects."
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "ID of the event that caused this event."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed tracing ID."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific data. Structure depends on event_type."
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Provenance metadata: who, what, where, why.",
+      "properties": {
+        "origin": { "type": "string" },
+        "chain": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata (tags, labels, etc.)."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,130 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# SEA Forge NATS JetStream Bridge Worker
+# Bridges Postgres canonical events to/from NATS JetStream.
+# Only active when sea_bridge.enabled=true AND agent_memory.enabled=true.
+# ==============================================================================
+
+# Gate: sea_bridge must be enabled
+if ! bashio::config.true 'sea_bridge.enabled'; then
+    bashio::log.info "SEA NATS bridge: disabled. Not starting."
+    exec sleep infinity
+fi
+
+# Gate: agent_memory must be enabled
+if ! bashio::config.true 'agent_memory.enabled'; then
+    bashio::log.warning "SEA NATS bridge: agent_memory not enabled. Not starting."
+    exec sleep infinity
+fi
+
+bashio::log.notice "SEA NATS bridge: starting..."
+
+# Gate: embedded mode is not yet implemented
+BRIDGE_MODE=$(bashio::config 'sea_bridge.mode' 'external_nats')
+if [[ "${BRIDGE_MODE}" == "embedded" ]]; then
+    bashio::log.error "SEA NATS bridge: mode 'embedded' is not yet implemented."
+    bashio::log.error "Use 'external_nats' with a separately deployed NATS server."
+    exec sleep infinity
+fi
+
+# ── Database connection ────────────────────────────────────────────────────
+DB_NAME=$(bashio::config 'agent_memory.database' 'agent_memory')
+DB_USER="bridge_worker"
+DB_PASSWORD=$(bashio::config 'security.bridge_worker_password' '')
+
+# Fall back to postgres superuser if bridge_worker has no password
+if [[ -z "${DB_PASSWORD}" ]]; then
+    if bashio::config.true 'developer_mode'; then
+        bashio::log.warning "SEA NATS bridge: bridge_worker has no password."
+        bashio::log.warning "developer_mode=true: falling back to postgres superuser."
+        bashio::log.warning "THIS IS UNSAFE FOR PRODUCTION. Set security.bridge_worker_password."
+        DB_USER="postgres"
+        DB_PASSWORD="homeassistant"
+    else
+        bashio::log.error "SEA NATS bridge: bridge_worker has no password configured."
+        bashio::log.error "Set security.bridge_worker_password or enable developer_mode for local development."
+        bashio::log.error "Refusing to start with superuser credentials outside developer_mode."
+        exec sleep infinity
+    fi
+fi
+
+export DB_HOST="localhost"
+export DB_PORT="5432"
+export DB_NAME="${DB_NAME}"
+export DB_USER="${DB_USER}"
+export DB_PASSWORD="${DB_PASSWORD}"
+
+# ── NATS connection ────────────────────────────────────────────────────────
+NATS_URL=$(bashio::config 'sea_bridge.nats.url' 'nats://127.0.0.1:4222')
+export NATS_URL
+NATS_CREDS_FILE=$(bashio::config 'sea_bridge.nats.creds_file' '')
+export NATS_CREDS_FILE
+NATS_TOKEN=$(bashio::config 'sea_bridge.nats.token' '')
+export NATS_TOKEN
+NATS_NAME=$(bashio::config 'sea_bridge.nats.name' 'agent-memory-ledger')
+export NATS_NAME
+NATS_CONNECT_TIMEOUT=$(bashio::config 'sea_bridge.nats.connect_timeout_seconds' '5')
+export NATS_CONNECT_TIMEOUT
+NATS_RECONNECT_WAIT=$(bashio::config 'sea_bridge.nats.reconnect_wait_seconds' '2')
+export NATS_RECONNECT_WAIT
+NATS_MAX_RECONNECTS=$(bashio::config 'sea_bridge.nats.max_reconnect_attempts' '-1')
+export NATS_MAX_RECONNECTS
+
+# ── JetStream ──────────────────────────────────────────────────────────────
+JS_ENABLED=$(bashio::config 'sea_bridge.nats.jetstream.enabled' 'true')
+export JS_ENABLED
+JS_STREAM_NAME=$(bashio::config 'sea_bridge.nats.jetstream.stream_name' 'SEA_LEDGER')
+export JS_STREAM_NAME
+JS_DURABLE_NAME=$(bashio::config 'sea_bridge.nats.jetstream.durable_name' 'agent_memory_ledger_bridge')
+export JS_DURABLE_NAME
+
+# Build subjects list from config
+JS_SUBJECTS=""
+for subject in $(bashio::config 'sea_bridge.nats.jetstream.subjects'); do
+    if [[ -n "${JS_SUBJECTS}" ]]; then
+        JS_SUBJECTS="${JS_SUBJECTS},${subject}"
+    else
+        JS_SUBJECTS="${subject}"
+    fi
+done
+export JS_SUBJECTS="${JS_SUBJECTS}"
+
+JS_OUTBOX_PREFIX=$(bashio::config 'sea_bridge.nats.jetstream.outbox_subject_prefix' 'sea.ledger.outbox')
+export JS_OUTBOX_PREFIX
+JS_ACK_WAIT=$(bashio::config 'sea_bridge.nats.jetstream.ack_wait_seconds' '30')
+export JS_ACK_WAIT
+JS_MAX_DELIVER=$(bashio::config 'sea_bridge.nats.jetstream.max_deliver' '10')
+export JS_MAX_DELIVER
+JS_BATCH_SIZE=$(bashio::config 'sea_bridge.nats.jetstream.batch_size' '100')
+export JS_BATCH_SIZE
+JS_POLL_INTERVAL=$(bashio::config 'sea_bridge.nats.jetstream.poll_interval_seconds' '2')
+export JS_POLL_INTERVAL
+
+# ── Bridge behavior ────────────────────────────────────────────────────────
+INBOUND_ENABLED=$(bashio::config 'sea_bridge.bridge.inbound_enabled' 'true')
+export INBOUND_ENABLED
+OUTBOUND_ENABLED=$(bashio::config 'sea_bridge.bridge.outbound_enabled' 'true')
+export OUTBOUND_ENABLED
+DEAD_LETTER_ENABLED=$(bashio::config 'sea_bridge.bridge.dead_letter_enabled' 'true')
+export DEAD_LETTER_ENABLED
+DEAD_LETTER_SUBJECT=$(bashio::config 'sea_bridge.bridge.dead_letter_subject' 'sea.ledger.deadletter')
+export DEAD_LETTER_SUBJECT
+IDEMPOTENCY_HEADER=$(bashio::config 'sea_bridge.bridge.idempotency_header' 'Nats-Msg-Id')
+export IDEMPOTENCY_HEADER
+SOURCE_NAME=$(bashio::config 'sea_bridge.bridge.source_name' 'sea-forge')
+export SOURCE_NAME
+FAIL_CLOSED=$(bashio::config 'sea_bridge.bridge.fail_closed' 'true')
+export FAIL_CLOSED
+
+# ── Health endpoints ──────────────────────────────────────────────────────
+HEALTH_ENABLED=$(bashio::config 'health.enabled' 'true')
+export HEALTH_ENABLED
+HEALTH_BIND=$(bashio::config 'health.bind' '127.0.0.1')
+export HEALTH_BIND
+HEALTH_PORT=$(bashio::config 'health.port' '8099')
+export HEALTH_PORT
+
+bashio::log.info "SEA NATS bridge: NATS_URL=${NATS_URL} STREAM=${JS_STREAM_NAME} DB=${DB_USER}@${DB_NAME}"
+
+exec python3 /usr/bin/sea_nats_bridge.py

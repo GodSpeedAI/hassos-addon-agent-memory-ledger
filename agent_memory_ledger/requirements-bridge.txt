@@ -1,0 +1,5 @@
+# Bridge worker Python dependencies — pinned for reproducible builds.
+# Update versions intentionally via renovate or manual bump.
+# CI enforces that every line has an exact pin (==).
+nats-py==2.10.0
+psycopg[binary]==3.2.9

@@ -6,6 +6,17 @@ When analyzing this project or generating code, agents MUST check for and priori
 
 That file contains project-level rules, architecture details, and preferred coding standards that supersede general knowledge and this document where they conflict.
 
+## Project Identity
+
+This repository implements **Agent Memory Ledger** — a local-first persistence,
+governance, memory, and event-bridge substrate for SEA Forge and ZeroClaw
+governed agent runtimes. It runs as a Home Assistant add-on for convenient
+installation and local operation.
+
+PostgreSQL is the canonical source of truth. NATS JetStream is transport and
+replay surface. Oxigraph is a rebuildable projection. RuVector embeddings are
+derived retrieval artifacts.
+
 ## Governed Autonomous Infrastructure
 
 This repository implements infrastructure for governed autonomous systems. It is not a generic CRUD application, a traditional AI wrapper, or merely a vector database extension.
@@ -68,9 +79,12 @@ This repository provides:
 - inbox/outbox broker interoperability
 - qualified memory lifecycle storage
 - audit projection infrastructure
+- SEA Forge NATS JetStream event bridge
+- Oxigraph RDF/SPARQL semantic graph projection
 
 The repository is intended to support:
 
+- SEA Forge and ZeroClaw agent runtimes
 - AI coding agents
 - MCP ecosystems
 - Home Assistant automations
@@ -234,6 +248,29 @@ Agents MUST preserve:
 
 Transport implementations MUST NOT redefine event semantics.
 
+## SEA Forge Bridge
+
+The SEA Forge bridge (`sea_nats_bridge.py`) connects the canonical PostgreSQL
+ledger to NATS JetStream for SEA Forge and ZeroClaw integration.
+
+Key constraints:
+
+- PostgreSQL is canonical. JetStream is transport, not authority.
+- The bridge uses `nats-py` with JetStream (NOT legacy NATS Streaming).
+- Inbound messages are validated against the SEA Event Contract (JSON Schema
+  files in `rootfs/usr/share/agent_memory_ledger/contracts/`).
+- Governance subjects fail closed. Agent event subjects fail open.
+- The `bridge_worker` DB role has least-privilege grants.
+- Outbound uses `FOR UPDATE SKIP LOCKED` on `event_log.outbox_events`.
+- Dead-letter routing goes to `sea.ledger.deadletter` via core NATS.
+
+When modifying the bridge:
+
+1. Update tests in `tests/` (168 tests across 6 modules).
+2. Run `ruff check` on the bridge source and tests.
+3. Verify the event contract if envelope validation changes.
+4. Ensure `bridge_worker` role grants remain least-privilege.
+
 ## Schema Evolution Rules
 
 Schema evolution should be additive first, backward compatible where practical, replay-safe, migration-safe, and provenance-preserving.
@@ -302,9 +339,20 @@ This repository is also a Home Assistant addon. Preserve addon conventions while
 2. `rootfs/`
    - `etc/s6-overlay/s6-rc.d/`: service definitions using s6-overlay
    - `usr/share/agent_memory_ledger/`: initialization scripts
+   - `usr/share/agent_memory_ledger/agent_memory/`: SQL schema migrations
+   - `usr/share/agent_memory_ledger/contracts/`: SEA Event Contract JSON Schema files
+   - `usr/bin/sea_nats_bridge.py`: SEA Forge NATS JetStream bridge worker
 
 3. `docker-dependencies/`
    - pre-built extension binaries
+
+4. `tests/`
+   - pytest test suite (168 tests, pure unit tests with mocks)
+   - `conftest.py`, `test_subject_routing.py`, `test_envelope_validation.py`,
+     `test_bridge.py`, `test_health.py`, `test_sql_schema.py`, `test_config.py`
+
+5. `docs/`
+   - `SEA_EVENT_CONTRACT.md`: formal event contract specification
 
 ### Shell Script Standards
 
@@ -322,6 +370,8 @@ This repository is also a Home Assistant addon. Preserve addon conventions while
 - Use version pins where stability is critical.
 - Document why specific versions are chosen.
 - Follow multi-stage build patterns when applicable.
+- All Docker image tags must be pinned (enforced by CI).
+- Exceptions must be documented in `scripts/check-dockerfile-deps.sh`.
 
 ### Service Management
 
@@ -329,6 +379,9 @@ This repository is also a Home Assistant addon. Preserve addon conventions while
 - Required service files are `type` and `run`; `finish` is optional.
 - Use `dependencies.d/` to control service startup order.
 - Services should handle failure and restart behavior deliberately.
+
+Services include: `postgres`, `pgagent`, `oxigraph`, `oxigraph-projector`,
+`init-addon`, `init-user`, `user` (bundle), `sea-nats-bridge`.
 
 ### Addon Configuration
 
@@ -387,6 +440,18 @@ bashio::log.debug "Debug message"
 
 Test initialization scripts for fresh installs and upgrades. Verify configuration options, service startup and shutdown, PostgreSQL extension loading, and supported architectures where practical.
 
+The bridge test suite (`tests/`) contains 168 pure unit tests using mocks. Run with:
+
+```bash
+python -m pytest tests/ -v
+```
+
+Lint with:
+
+```bash
+ruff check agent_memory_ledger/rootfs/usr/bin/sea_nats_bridge.py tests/
+```
+
 Changes affecting governance or canonical history MUST include validation for:
 
 - replayability
@@ -419,7 +484,8 @@ Documentation should explain:
 - tradeoffs
 - operational constraints
 
-Avoid shallow marketing language.
+Avoid shallow marketing language. This is complex by design because SEA Forge is
+complex. Be honest about complexity.
 
 ## Code Review Checklist
 
@@ -442,6 +508,8 @@ Before completing work, verify:
 - [ ] identity lineage remains acyclic
 - [ ] migrations are additive or explicitly justified
 - [ ] canonical events are not deleted or rewritten
+- [ ] bridge changes include corresponding test updates
+- [ ] event contract changes are reflected in JSON Schema files
 
 ## Getting Help
 
@@ -451,8 +519,9 @@ When stuck:
 2. Check Home Assistant addon documentation.
 3. Examine bashio library capabilities.
 4. Check PostgreSQL, TimescaleDB, and RuVector documentation.
-5. Trace the governance, identity, replay, and provenance invariants affected by the change.
-6. Ask specific questions about the architecture or requirement.
+5. Check nats-py documentation for NATS JetStream API.
+6. Trace the governance, identity, replay, and provenance invariants affected by the change.
+7. Ask specific questions about the architecture or requirement.
 
 ## Guiding Principle
 

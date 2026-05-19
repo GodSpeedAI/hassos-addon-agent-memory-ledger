@@ -25,11 +25,14 @@ backup_exclude:
 ports:
   5432/tcp:
   7878/tcp:
+  8099/tcp:
 ports_description:
   5432/tcp: "PostgreSQL Port. Beware! This port may already be in use.
     Choose another port-number if the add-on won't start."
   7878/tcp: "Oxigraph SPARQL endpoint (only active when oxigraph.enabled=true).
     Default: internal only (127.0.0.1). Set bind to 0.0.0.0 to expose."
+  8099/tcp: "Health and metrics endpoint (only active when health.enabled=true).
+    Default: internal only (127.0.0.1). Not exposed by default."
 options:
   databases:
     - homeassistant
@@ -40,11 +43,13 @@ options:
     maxmemory: 512MB
     maxcpus: 4
   max_connections: 50
+  developer_mode: false
   system_packages: []
   init_commands: []
   retry_upgrade: false
   agent_memory:
     enabled: false
+    enable_retention_policy: false
   oxigraph:
     enabled: false
     data_dir: /data/oxigraph
@@ -59,6 +64,51 @@ options:
     rebuild_on_start: false
     batch_size: 500
     max_projection_interval_seconds: 60
+  security:
+    require_password_change: true
+    create_least_privilege_roles: true
+    ledger_writer_password: ""
+    ledger_reader_password: ""
+    projection_worker_password: ""
+    bridge_worker_password: ""
+  sea_bridge:
+    enabled: false
+    mode: "external_nats"
+    nats:
+      url: "nats://127.0.0.1:4222"
+      creds_file: ""
+      token: ""
+      name: "agent-memory-ledger"
+      connect_timeout_seconds: 5
+      reconnect_wait_seconds: 2
+      max_reconnect_attempts: -1
+      jetstream:
+        enabled: true
+        stream_name: "SEA_LEDGER"
+        durable_name: "agent_memory_ledger_bridge"
+        subjects:
+          - "sea.agent.event.>"
+          - "sea.governance.request.>"
+          - "sea.governance.decision.>"
+          - "sea.memory.write.>"
+          - "sea.memory.lifecycle.>"
+        outbox_subject_prefix: "sea.ledger.outbox"
+        ack_wait_seconds: 30
+        max_deliver: 10
+        batch_size: 100
+        poll_interval_seconds: 2
+    bridge:
+      inbound_enabled: true
+      outbound_enabled: true
+      dead_letter_enabled: true
+      dead_letter_subject: "sea.ledger.deadletter"
+      idempotency_header: "Nats-Msg-Id"
+      source_name: "sea-forge"
+      fail_closed: true
+  health:
+    enabled: true
+    bind: 127.0.0.1
+    port: 8099
   postgresql_config: {}
   pg_hba_config: []
 schema:
@@ -71,6 +121,7 @@ schema:
     maxmemory: str?
     maxcpus: int(1,)?
   max_connections: int(20,)
+  developer_mode: bool?
   system_packages:
     - str
   init_commands:
@@ -82,6 +133,7 @@ schema:
     create_default_schema: bool?
     enable_ruvector: bool?
     enable_timescaledb: bool?
+    enable_retention_policy: bool?
     retention_days: int(1,)?
     embedding_dimension: int(1,4096)?
     include_embeddings_in_backup: bool?
@@ -99,6 +151,47 @@ schema:
     rebuild_on_start: bool?
     batch_size: int(1,10000)?
     max_projection_interval_seconds: int(10,3600)?
+  security:
+    require_password_change: bool?
+    create_least_privilege_roles: bool?
+    ledger_writer_password: password?
+    ledger_reader_password: password?
+    projection_worker_password: password?
+    bridge_worker_password: password?
+  sea_bridge:
+    enabled: bool
+    mode: list(external_nats|embedded|disabled)?
+    nats:
+      url: str?
+      creds_file: str?
+      token: str?
+      name: str?
+      connect_timeout_seconds: int(1,300)?
+      reconnect_wait_seconds: int(1,300)?
+      max_reconnect_attempts: int(-1,1000)?
+      jetstream:
+        enabled: bool?
+        stream_name: str?
+        durable_name: str?
+        subjects:
+          - str
+        outbox_subject_prefix: str?
+        ack_wait_seconds: int(1,600)?
+        max_deliver: int(1,1000)?
+        batch_size: int(1,10000)?
+        poll_interval_seconds: int(1,3600)?
+    bridge:
+      inbound_enabled: bool?
+      outbound_enabled: bool?
+      dead_letter_enabled: bool?
+      dead_letter_subject: str?
+      idempotency_header: str?
+      source_name: str?
+      fail_closed: bool?
+  health:
+    enabled: bool?
+    bind: str?
+    port: port?
   postgresql_config:
     match(^[a-z_]+$)?: str?
   pg_hba_config:

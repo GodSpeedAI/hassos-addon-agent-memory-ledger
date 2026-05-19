@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/contracts/sea.memory.lifecycle.v1.json",
+  "title": "SEA Memory Lifecycle v1",
+  "description": "Memory lifecycle transition request envelope. Fail-closed: any validation failure rejects the message to dead letter. These events request a status transition for an existing memory item. The bridge records them in inbox_events; actual lifecycle transitions require governance approval.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "source_agent",
+    "occurred_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Envelope schema version. Must be 'v1'."
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier (UUID v4)."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Deduplication key. If absent, event_id is used."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["zeroclaw", "sea-forge", "home-assistant", "other"],
+      "description": "Originating system."
+    },
+    "source_agent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Agent or service requesting the lifecycle transition."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the transition was requested (RFC 3339)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlates related events across subjects."
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "ID of the event that caused this transition request."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed tracing ID."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Memory lifecycle transition payload.",
+      "required": [
+        "memory_item_id",
+        "new_status",
+        "changed_by",
+        "reason"
+      ],
+      "properties": {
+        "memory_item_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the memory item to transition. MUST reference an existing memory.items row."
+        },
+        "new_status": {
+          "type": "string",
+          "enum": [
+            "observed",
+            "candidate",
+            "accepted",
+            "verified",
+            "superseded",
+            "rejected",
+            "expired"
+          ],
+          "description": "Target lifecycle status."
+        },
+        "changed_by": {
+          "type": "string",
+          "description": "Identity or system requesting the transition."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Justification for the transition."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional transition metadata."
+        }
+      },
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Envelope-level provenance metadata."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Envelope-level metadata."
+    }
+  },
+  "additionalProperties": false
+}

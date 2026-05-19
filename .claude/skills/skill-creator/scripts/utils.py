@@ -2,12 +2,13 @@
 
 from pathlib import Path
 
+import yaml
 
 
 def parse_skill_md(skill_path: Path) -> tuple[str, str, str]:
     """Parse a SKILL.md file, returning (name, description, full_content)."""
-    content = (skill_path / "SKILL.md").read_text()
-    lines = content.split("\n")
+    content = (skill_path / "SKILL.md").read_text(encoding="utf-8")
+    lines = content.splitlines()
 
     if lines[0].strip() != "---":
         raise ValueError("SKILL.md missing frontmatter (no opening ---)")
@@ -21,32 +22,21 @@ def parse_skill_md(skill_path: Path) -> tuple[str, str, str]:
     if end_idx is None:
         raise ValueError("SKILL.md missing frontmatter (no closing ---)")
 
-    name = ""
-    description = ""
-    frontmatter_lines = lines[1:end_idx]
-    i = 0
-    while i < len(frontmatter_lines):
-        line = frontmatter_lines[i]
-        if line.startswith("name:"):
-            name = line[len("name:"):].strip().strip('"').strip("'")
-        elif line.startswith("description:"):
-            value = line[len("description:"):].strip()
-            # Handle YAML multiline indicators (>, |, >-, |-)
-            if value in (">", "|", ">-", "|-"):
-                continuation_lines: list[str] = []
-                i += 1
-                while i < len(frontmatter_lines) and (frontmatter_lines[i].startswith("  ") or frontmatter_lines[i].startswith("\t")):
-                    continuation_lines.append(frontmatter_lines[i].strip())
-                    i += 1
-                if value in (">", ">-"):
-                    description = " ".join(continuation_lines)
-                else:
-                    description = "\n".join(continuation_lines)
-                if value in ("|-", ">-"):
-                    description = description.rstrip("\n")
-                continue
-            else:
-                description = value.strip('"').strip("'")
-        i += 1
+    # Extract frontmatter block and parse with YAML
+    frontmatter_block = "\n".join(lines[1:end_idx])
+    try:
+        frontmatter = yaml.safe_load(frontmatter_block)
+        if not isinstance(frontmatter, dict):
+            frontmatter = {}
+    except yaml.YAMLError as e:
+        raise ValueError(f"SKILL.md frontmatter is invalid YAML: {e}")
+
+    name = frontmatter.get("name", "").strip()
+    description = frontmatter.get("description", "").strip()
+
+    if not name or not isinstance(name, str):
+        raise ValueError("SKILL.md frontmatter missing or invalid 'name' field")
+    if not description or not isinstance(description, str):
+        raise ValueError("SKILL.md frontmatter missing or invalid 'description' field")
 
     return name, description, content

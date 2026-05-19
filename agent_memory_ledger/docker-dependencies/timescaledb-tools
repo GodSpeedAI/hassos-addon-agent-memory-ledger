@@ -5,6 +5,9 @@ ARG GO_VERSION=1.24.4
 ###########################################
 FROM golang:${GO_VERSION}-alpine AS timescaledb-tools
 
+# TODO(pinning): timescaledb-tools has no versioned releases. The Go modules
+# are installed at HEAD via `go install @latest`. Pin to a specific commit
+# hash when upstream adds version tags. Tracked in renovate.json regexManagers.
 ARG VERSION=latest
 ARG TARGETARCH
 ARG TARGETVARIANT

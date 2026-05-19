@@ -7,7 +7,7 @@ SPEC_INPUT=${1:-}
 
 if [[ -n "${SPEC_INPUT}" ]]; then
     SPEC_BASENAME=$(basename "${SPEC_INPUT}")
-    SLUG=${SPEC_BASENAME#${DATE_STAMP}-}
+    SLUG=${SPEC_BASENAME#????-??-??-}
     SLUG=${SLUG%.md}
 else
     SLUG=task

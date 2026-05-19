@@ -10,6 +10,9 @@ ARG ALPINE_VERSION=3.23
 FROM timescale/timescaledb:2.26.4-pg16                                          AS timescale-pg16
 FROM timescale/timescaledb:2.26.4-pg17                                          AS timescale-pg17
 
+# timescaledb-tools uses :latest because upstream has no versioned releases.
+# The tools are rebuilt from HEAD on every dependencies workflow run.
+# Tracked for pinning in renovate.json.
 # hadolint ignore=DL3007
 FROM ghcr.io/godspeedai/agent-memory-ledger/dependency/timescaledb-tools:latest                    AS timescaledb-tools
 FROM ghcr.io/godspeedai/agent-memory-ledger/dependency/pgagent-pg16:pgagent-4.2.3                  AS pgagent-pg16
@@ -128,11 +131,16 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
         proj \
         protobuf-c
 
+# --allow-untrusted justification: Alpine v3.23 community repository is not
+# signed with the same key as the main repository. The package
+# gdal-driver-postgisraster is only available in community and is required for
+# PostGIS raster support. The repository URL is pinned to v3.23 (not edge),
+# limiting exposure. Remove --allow-untrusted once Alpine 3.23 community
+# signing keys are available in the base image.
 # hadolint ignore=DL3018,DL3019
 RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
     set -ex \
     && apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.23/community --allow-untrusted \
-        #postgis=3.5.0-r5 \
         gdal-driver-postgisraster \
     && \
     apk add --repository https://dl-cdn.alpinelinux.org/alpine/v3.23/main \
@@ -258,6 +266,26 @@ RUN set -ex \
     && mv /tmp/oxigraph /usr/local/bin/oxigraph \
     && LD_PRELOAD="/usr/lib/libresolv_stub.so /lib/libgcompat.so" oxigraph --version
 
+# --------------------------------------
+# SEA Forge NATS JetStream Bridge Worker
+# Python 3 runtime + nats-py + psycopg
+# Only used when sea_bridge.enabled=true
+# Dependencies are pinned in requirements-bridge.txt for reproducibility.
+# --------------------------------------
+# hadolint ignore=DL3018,DL3019
+RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,target=/var/cache/apk \
+    set -ex \
+    && apk add \
+        python3 \
+        py3-pip \
+    && python3 -m ensurepip --upgrade
+
+COPY requirements-bridge.txt /tmp/requirements-bridge.txt
+# hadolint ignore=DL3018,DL3019
+RUN pip install --no-cache-dir --break-system-packages \
+        -r /tmp/requirements-bridge.txt \
+    && rm -f /tmp/requirements-bridge.txt
+
 ###########################################
 # Finalize Image
 ###########################################
@@ -286,7 +314,10 @@ RUN chmod +x /usr/share/agent_memory_ledger/backup_pre.sh \
     && chmod +x /usr/share/agent_memory_ledger/validate_agent_memory.sh \
     && chmod +x /usr/share/agent_memory_ledger/validate_governance.sh \
     && chmod +x /usr/share/agent_memory_ledger/validate_oxigraph.sh \
-    && chmod +x /usr/share/agent_memory_ledger/oxigraph_project.sh
+    && chmod +x /usr/share/agent_memory_ledger/validate_security.sh \
+    && chmod +x /usr/share/agent_memory_ledger/validate_sea_bridge.sh \
+    && chmod +x /usr/share/agent_memory_ledger/oxigraph_project.sh \
+    && chmod +x /usr/bin/sea_nats_bridge.py
 
 WORKDIR /
 

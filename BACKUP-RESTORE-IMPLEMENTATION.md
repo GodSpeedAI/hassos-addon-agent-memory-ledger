@@ -2,7 +2,33 @@
 
 ## Overview
 
-This implementation adds a resilient backup and restore mechanism for the TimescaleDB addon that addresses the problem of backing up databases while they're running.
+This document describes the backup and restore mechanism for the Agent Memory
+Ledger — a local-first governance substrate for SEA Forge and ZeroClaw that
+runs as a Home Assistant add-on.
+
+The backup system uses SQL dumps rather than raw PostgreSQL data files. This
+preserves the canonical event ledger, governance records, identity lineage,
+memory lifecycle, and all schema migrations in a portable, version-agnostic
+format.
+
+## Canonical vs. Derived in Backup
+
+The `pg_dumpall` output is the canonical backup. It contains:
+
+- All schema definitions (`event_log`, `governance`, `memory`, `embeddings`,
+  `kg`, `audit`)
+- All canonical data (events, governance decisions, identity lineage, memory
+  items)
+- Migration tracking records (`agent_memory.schema_migrations`)
+- Role definitions and grants
+
+These are derived and rebuildable — they do not require backup:
+
+- **Oxigraph data** — fully rebuildable from Postgres via
+  `oxigraph.rebuild_on_start: true`
+- **NATS JetStream stream** — transport/replay surface, not long-term authority
+- **Embeddings** — regenerable from qualified memory objects (unless
+  `include_embeddings_in_backup: true`)
 
 ## Changes Made
 
@@ -21,7 +47,8 @@ These hooks ensure that:
 
 - Before backup: A SQL dump is created
 - After backup: The SQL dump is cleaned up
-- During backup: The PostgreSQL data directory is excluded (only the SQL dump is backed up)
+- During backup: The PostgreSQL data directory is excluded (only the SQL dump
+  is backed up)
 
 ### 2. Pre-Backup Script (`backup_pre.sh`)
 
@@ -111,57 +138,62 @@ RUN chmod +x /usr/share/agent_memory_ledger/backup_pre.sh \
     && chmod +x /usr/share/agent_memory_ledger/restore_from_backup.sh
 ```
 
-### 7. Documentation (`README.md`)
-
-Added comprehensive "Backup and Restore" section covering:
-
-- How backups work
-- How restore works
-- Manual backup procedures
-- Troubleshooting guide
-- Important notes and caveats
-
 ## How It Works
 
 ### Backup Flow
 
-```
+```text
 User triggers HA backup
-    ↓
+    |
+    v
 backup_pre.sh runs
-    ↓
+    |
+    v
 pg_dumpall creates /data/backup_db.sql
-    ↓
+    |
+    v
 HA backs up /data/* (excluding /data/postgres/*)
-    ↓
+    |
+    v
 backup_post.sh runs
-    ↓
+    |
+    v
 backup_db.sql is removed
-    ↓
+    |
+    v
 Backup complete
 ```
 
 ### Restore Flow
 
-```
+```text
 User restores HA backup
-    ↓
+    |
+    v
 Addon starts with backup_db.sql
-    ↓
+    |
+    v
 init-addon/run detects restore scenario
-    ↓
+    |
+    v
 Initializes fresh PostgreSQL database
-    ↓
+    |
+    v
 restore_from_backup.sh runs
-    ↓
+    |
+    v
 Starts PostgreSQL temporarily
-    ↓
+    |
+    v
 Restores from SQL dump
-    ↓
+    |
+    v
 Stops PostgreSQL
-    ↓
+    |
+    v
 Removes backup_db.sql
-    ↓
+    |
+    v
 Normal startup continues
 ```
 
@@ -174,15 +206,18 @@ Normal startup continues
 5. **Automatic:** No user intervention required
 6. **Resilient:** Handles corrupted databases automatically
 7. **Recoverable:** Preserves backup file if restore fails
+8. **Governance-safe:** Canonical event history, governance decisions, identity
+   lineage, and migration records are all preserved in the dump
 
 ## Testing Recommendations
 
 1. **Test normal backup/restore:**
-   - Create some test data
+   - Create some test data (events, governance decisions, identities)
    - Trigger Home Assistant backup
    - Delete database or corrupt it
    - Restore from backup
-   - Verify all data is restored
+   - Verify all canonical data is restored
+   - Verify migration tracking is intact
 
 2. **Test with PostgreSQL not running:**
    - Stop PostgreSQL
@@ -201,6 +236,13 @@ Normal startup continues
    - Start addon
    - Verify restoration occurs
 
+5. **Test with SEA Forge bridge enabled:**
+   - Enable `sea_bridge` and produce some events
+   - Trigger backup
+   - Restore on fresh install
+   - Verify canonical tables contain the bridged events
+   - Verify `bridge_worker` role is recreated
+
 ## Future Enhancements
 
 Possible improvements:
@@ -215,13 +257,15 @@ Possible improvements:
 
 This implementation follows the AGENTS.md guidelines:
 
-✅ Uses `bashio::log.*` for all logging
-✅ Quotes all variables properly
-✅ Includes comprehensive error handling
-✅ Documents non-obvious logic
-✅ Uses meaningful variable names
-✅ Follows existing project patterns
-✅ Maintains backward compatibility
-✅ Adds user-facing documentation
-✅ Uses `#!/command/with-contenv bashio` shebang
-✅ Handles edge cases gracefully
+- Uses `bashio::log.*` for all logging
+- Quotes all variables properly
+- Includes comprehensive error handling
+- Documents non-obvious logic
+- Uses meaningful variable names
+- Follows existing project patterns
+- Maintains backward compatibility
+- Adds user-facing documentation
+- Uses `#!/command/with-contenv bashio` shebang
+- Handles edge cases gracefully
+- Preserves canonical history as the backup authority
+- Does not conflate derived state (Oxigraph, embeddings) with canonical backup

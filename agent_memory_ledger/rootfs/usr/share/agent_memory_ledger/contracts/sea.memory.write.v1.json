@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/contracts/sea.memory.write.v1.json",
+  "title": "SEA Memory Write v1",
+  "description": "External memory write proposal envelope. Fail-closed: any validation failure rejects the message to dead letter. Memory items created via this subject enter with status 'candidate' and must be promoted through the lifecycle.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "source_agent",
+    "occurred_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Envelope schema version. Must be 'v1'."
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier (UUID v4)."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Deduplication key. If absent, event_id is used."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["zeroclaw", "sea-forge", "home-assistant", "other"],
+      "description": "Originating system."
+    },
+    "source_agent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Agent or service that produced this memory write."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the memory was observed (RFC 3339)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlates related events across subjects."
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "ID of the event that caused this memory write."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed tracing ID."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Memory write payload.",
+      "required": [
+        "source_agent",
+        "content"
+      ],
+      "properties": {
+        "source_agent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Agent that authored this memory content."
+        },
+        "memory_type": {
+          "type": "string",
+          "default": "fact",
+          "description": "Memory classification (fact, procedure, preference, etc.)."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Memory content text. Must not be empty."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Optional summary of the content."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.5,
+          "description": "Confidence score [0.0, 1.0]."
+        },
+        "salience": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Salience/importance score [0.0, 1.0]. Stored in metadata."
+        },
+        "provenance": {
+          "type": "object",
+          "description": "Provenance metadata for the memory content.",
+          "properties": {
+            "origin": { "type": "string" },
+            "chain": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional memory metadata (tags, labels, etc.)."
+        }
+      },
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Envelope-level provenance metadata."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Envelope-level metadata."
+    }
+  },
+  "additionalProperties": false
+}

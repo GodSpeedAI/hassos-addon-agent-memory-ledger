@@ -4,19 +4,19 @@
         {
             "id": 1,
             "prompt": "A marketplace plugin is unavailable. Use the local superpowerz skill suite to plan and implement a small configuration validation change without skipping design or verification.",
-            "expected_output": "Routes into brainstorming, writing-plans, and executing-plans, creates or references a short spec, executes scoped work, and reports fresh verification evidence.",
+            "expected_output": "Routes using-superpowers → brainstorming → writing-plans → executing-plans, creates or references a short spec, executes scoped work, and reports fresh verification evidence via verification-before-completion.",
             "files": []
         },
         {
             "id": 2,
             "prompt": "A shell init script in this repository fails on upgrade. Use the local superpowerz skill suite to debug it starting from a falsifiable hypothesis and a cheap discriminating check.",
-            "expected_output": "Routes into systematic-debugging, starts from a concrete anchor, performs a local fix, and validates immediately after the first edit.",
+            "expected_output": "Routes using-superpowers → systematic-debugging, starts from a concrete anchor, performs a local fix, and validates immediately after the first edit.",
             "files": []
         },
         {
             "id": 3,
             "prompt": "Prepare a risky multi-file change in an isolated branch using the local superpowerz skill suite, including worktree setup, a written plan, and explicit completion criteria.",
-            "expected_output": "Uses the worktree helper, creates a plan artifact, routes execution through executing-plans, keeps the task sliced, and describes verification gates before completion.",
+            "expected_output": "Routes using-superpowers → brainstorming → writing-plans → executing-plans, uses the worktree helper, creates a plan artifact, routes execution through executing-plans, keeps the task sliced, and reports verification gates before completion via verification-before-completion.",
             "files": []
         }
     ]

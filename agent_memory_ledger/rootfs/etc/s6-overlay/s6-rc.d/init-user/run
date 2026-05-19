@@ -1,14 +1,43 @@
 #!/command/with-contenv bashio
 # shellcheck shell=bash
 # ==============================================================================
-# Installs custom user packages
-# Persists user settings and installs custom user packages.
+# Installs custom user packages and runs user init commands.
+#
+# SECURITY GATE: system_packages and init_commands are ONLY executed when
+# developer_mode is true. When developer_mode is false (the default), these
+# options are silently ignored to prevent arbitrary package installation and
+# command execution in production deployments.
+#
+# init_commands uses bash -c to execute each command. This is inherently
+# unsafe — it allows arbitrary code execution inside the container. This is
+# why it is gated behind developer_mode. Do not remove the gate.
 # ==============================================================================
 
-# Install user configured/requested packages
 bashio::log.info "Running user-init.."
 
+# ── developer_mode gate ──────────────────────────────────────────────────────
+# When developer_mode is false (default), refuse to execute unsafe options.
+# This prevents accidental exposure of system_packages and init_commands in
+# production Home Assistant deployments.
+if ! bashio::config.true 'developer_mode'; then
+    if bashio::config.has_value 'system_packages'; then
+        bashio::log.warning "system_packages is configured but developer_mode is false."
+        bashio::log.warning "Set developer_mode: true to enable system_packages."
+    fi
+    if bashio::config.has_value 'init_commands'; then
+        bashio::log.warning "init_commands is configured but developer_mode is false."
+        bashio::log.warning "Set developer_mode: true to enable init_commands."
+    fi
+    bashio::log.info "done (developer_mode is off — unsafe options skipped)"
+    exit 0
+fi
+
+bashio::log.warning "developer_mode is ENABLED — system_packages and init_commands are active."
+bashio::log.warning "These options allow arbitrary code execution. Do not use in production."
+
+# ── system_packages ──────────────────────────────────────────────────────────
 if bashio::config.has_value 'system_packages'; then
+    bashio::log.info "Installing system packages (developer_mode=true)..."
     apk update \
         || bashio::exit.nok 'Failed updating Alpine packages repository indexes'
 
@@ -18,11 +47,22 @@ if bashio::config.has_value 'system_packages'; then
     done
 fi
 
-# Executes user commands on startup
+# ── init_commands ────────────────────────────────────────────────────────────
+# Each command is executed via bash -c. This is unsafe by design — it allows
+# shell expansion, pipes, redirections, and arbitrary code. The developer_mode
+# gate above is the only protection. Do not use eval here; bash -c is the
+# narrowest practical alternative that still supports multi-word commands.
 if bashio::config.has_value 'init_commands'; then
+    bashio::log.info "Running init commands (developer_mode=true)..."
     while read -r cmd; do
-        eval "${cmd}" \
-            || bashio::exit.nok "Failed executing init command: ${cmd}"
+        if [[ -z "${cmd}" ]]; then
+            continue
+        fi
+        bashio::log.info "  init_command: ${cmd}"
+        if ! bash -c "${cmd}"; then
+            bashio::log.error "Failed executing init command: ${cmd}"
+            bashio::exit.nok "init_commands failed (developer_mode is on)"
+        fi
     done <<< "$(bashio::config 'init_commands')"
 fi
 

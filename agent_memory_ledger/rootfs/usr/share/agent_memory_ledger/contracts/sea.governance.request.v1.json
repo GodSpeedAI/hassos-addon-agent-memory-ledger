@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/contracts/sea.governance.request.v1.json",
+  "title": "SEA Governance Request v1",
+  "description": "Governance action request envelope. Fail-closed: any validation failure rejects the message to dead letter. The requesting identity MUST exist in governance.identities before this request is accepted.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "source_agent",
+    "occurred_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Envelope schema version. Must be 'v1'."
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier (UUID v4)."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Deduplication key. If absent, event_id is used."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["zeroclaw", "sea-forge", "home-assistant", "other"],
+      "description": "Originating system."
+    },
+    "source_agent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Agent or service that produced this request."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the request occurred (RFC 3339)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlates related events across subjects."
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "ID of the event that caused this request."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed tracing ID."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Governance action request payload.",
+      "required": [
+        "requesting_identity_id",
+        "requested_action_type"
+      ],
+      "properties": {
+        "requesting_identity_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the identity requesting the action. MUST reference an existing governance.identities row."
+        },
+        "requested_action_type": {
+          "type": "string",
+          "enum": [
+            "tool_call",
+            "memory_write",
+            "file_write",
+            "network_request",
+            "email_send",
+            "command_execute",
+            "policy_override_request"
+          ],
+          "description": "Type of governed action being requested."
+        },
+        "requested_resource": {
+          "type": "string",
+          "description": "Resource identifier the action targets (file path, URL, tool name, etc.)."
+        },
+        "payload": {
+          "type": "object",
+          "description": "Action-specific parameters."
+        },
+        "provenance": {
+          "type": "object",
+          "description": "Provenance metadata for the request.",
+          "properties": {
+            "origin": { "type": "string" },
+            "chain": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional request metadata."
+        }
+      },
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Envelope-level provenance metadata."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Envelope-level metadata."
+    }
+  },
+  "additionalProperties": false
+}

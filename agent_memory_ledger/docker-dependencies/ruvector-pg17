@@ -1,6 +1,7 @@
 # Stage 1: Build ruvector-postgres on Debian (matching upstream build environment)
 # hadolint ignore=DL3007
-FROM rust:1-slim-bookworm AS builder
+# Pinning Rust version for reproducible builds. Update with renovate.
+FROM rust:1.87.0-slim-bookworm AS builder
 ARG VERSION
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -49,7 +50,8 @@ WORKDIR /workspace/crates/ruvector-postgres
 RUN cargo pgrx package --features "pg17 index-all"
 
 # Stage 2: Copy built extension into TimescaleDB Alpine image
-FROM timescale/timescaledb:latest-pg17
+# Pinning to match main Dockerfile timescale version (2.26.4)
+FROM timescale/timescaledb:2.26.4-pg17
 
 # Copy the built .so and extension files from the Debian builder
 COPY --from=builder /workspace/target/release/ruvector-pg17/usr/lib/postgresql/17/lib/ruvector*.so /usr/local/lib/postgresql/

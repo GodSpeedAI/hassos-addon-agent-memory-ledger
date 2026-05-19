@@ -1,0 +1,5 @@
+# Test dependencies — pinned for reproducible CI.
+pytest==8.4.1
+pytest-asyncio==1.0.0
+psycopg[binary]==3.2.9
+nats-py==2.10.0

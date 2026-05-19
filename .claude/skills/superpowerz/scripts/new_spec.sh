@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 DATE_STAMP=$(date +%F)
 SLUG=${1:-task}
-TITLE=${2:-${SLUG//-/ }}
+TITLE=${2:-${SLUG//-/\040}}
 SPEC_DIR="${ROOT_DIR}/tmp/superpowerz/specs"
 SPEC_PATH="${SPEC_DIR}/${DATE_STAMP}-${SLUG}.md"
 

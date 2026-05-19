@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://godspeed.ai/contracts/sea.governance.decision.v1.json",
+  "title": "SEA Governance Decision v1",
+  "description": "Governance admission decision envelope. Fail-closed: any validation failure rejects the message to dead letter. Each decision references a specific action request and the policy version that governed it.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "source_agent",
+    "occurred_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Envelope schema version. Must be 'v1'."
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier (UUID v4)."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Deduplication key. If absent, event_id is used."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["zeroclaw", "sea-forge", "home-assistant", "other"],
+      "description": "Originating system."
+    },
+    "source_agent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Agent or service that produced this decision."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the decision was made (RFC 3339)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlates related events across subjects."
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "ID of the event that caused this decision."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed tracing ID."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Governance decision payload.",
+      "required": [
+        "request_id",
+        "decision",
+        "policy_version_id"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the action request this decision resolves. MUST reference an existing governance.action_requests row."
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["accepted", "rejected", "requires_review", "deferred"],
+          "description": "Admission decision."
+        },
+        "policy_version_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the policy version that governed this decision. MUST reference an existing governance.policy_versions row."
+        },
+        "decision_reason": {
+          "type": "string",
+          "description": "Human-readable explanation of the decision."
+        },
+        "admission_context": {
+          "type": "object",
+          "description": "Snapshot of governance state at decision time (identity status, active roles, lineage ancestors, policy snapshot)."
+        },
+        "reviewed_by": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the identity that reviewed this decision (optional, for human-in-the-loop)."
+        }
+      },
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Envelope-level provenance metadata."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Envelope-level metadata."
+    }
+  },
+  "additionalProperties": false
+}

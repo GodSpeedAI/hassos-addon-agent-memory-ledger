@@ -352,7 +352,7 @@ SELECT
     ad.decision_reason,
     pv.policy_name        AS governing_policy,
     pv.version            AS governing_policy_version,
-    ac.admission_context
+    ac.evaluation_inputs AS admission_context
 FROM governance.action_requests ar
 JOIN governance.action_decisions ad
     ON ad.request_id = ar.request_id AND ad.decision = 'rejected'

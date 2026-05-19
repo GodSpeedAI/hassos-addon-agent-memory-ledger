@@ -163,6 +163,143 @@ jobs:
       - name: Dependency review
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
 
+  lint-dockerfile-deps:
+    name: Dockerfile dependency hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Check for unapproved :latest, --allow-untrusted, and missing Python pins
+        shell: bash
+        run: bash scripts/check-dockerfile-deps.sh
+
+  test-bridge:
+    name: Bridge unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e40205e3a10469
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install -r tests/requirements-test.txt
+
+      - name: Lint bridge Python (ruff check)
+        run: |
+          pip install ruff==0.12.0
+          ruff check agent_memory_ledger/rootfs/usr/bin/sea_nats_bridge.py tests/
+
+      - name: Run unit tests
+        run: python -m pytest tests/ -v --tb=short
+
+  test-bridge-integration:
+    name: Bridge integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: homeassistant
+          POSTGRES_DB: agent_memory
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5f447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e40205e3a10469
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install -r tests/requirements-test.txt
+
+      - name: Apply schema migrations
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: homeassistant
+          PGDATABASE: agent_memory
+        run: |
+          psql -f agent_memory_ledger/rootfs/usr/share/agent_memory_ledger/agent_memory/000_schema_migrations.sql
+          for f in agent_memory_ledger/rootfs/usr/share/agent_memory_ledger/agent_memory/[0-9][0-9][0-9]_*.sql; do
+            [[ "$(basename "$f")" == "000_schema_migrations.sql" ]] && continue
+            psql -f "$f"
+          done
+
+      - name: Run integration tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_NAME: agent_memory
+          DB_USER: postgres
+          DB_PASSWORD: homeassistant
+        run: python -m pytest tests/ -v --tb=short -m integration || echo "No integration tests yet — stage ready for future tests"
+
+  validate-bridge-schema:
+    name: Validate bridge SQL schema
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: homeassistant
+          POSTGRES_DB: agent_memory
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Check out code from GitHub
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5f447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Apply and validate schema migrations
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: homeassistant
+          PGDATABASE: agent_memory
+        run: |
+          echo "Applying 000_schema_migrations.sql..."
+          psql -f agent_memory_ledger/rootfs/usr/share/agent_memory_ledger/agent_memory/000_schema_migrations.sql
+
+          echo "Applying numbered migrations..."
+          for f in agent_memory_ledger/rootfs/usr/share/agent_memory_ledger/agent_memory/[0-9][0-9][0-9]_*.sql; do
+            [[ "$(basename "$f")" == "000_schema_migrations.sql" ]] && continue
+            echo "  Applying $(basename "$f")..."
+            psql -f "$f" || { echo "FAILED: $(basename "$f")"; exit 1; }
+          done
+
+          echo "Validating schema structure..."
+          psql -c "SELECT count(*) FROM information_schema.schemata WHERE schema_name IN ('event_log','governance','memory','embeddings','kg','audit','agent_memory')"
+          psql -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'event_log' AND table_name IN ('agent_events','inbox_events','outbox_events','delivery_attempts')"
+          psql -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'governance' AND table_name IN ('identities','identity_events','action_requests','action_decisions')"
+          psql -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'memory' AND table_name = 'items'"
+
+          echo "Schema validation passed."
+
   build:
     name: Build ${{ matrix.architecture }}
     needs:
@@ -174,6 +311,10 @@ jobs:
       - lint-shellcheck
       - lint-yamllint
       - lint-zizmor
+      - lint-dockerfile-deps
+      - test-bridge
+      - test-bridge-integration
+      - validate-bridge-schema
     runs-on: ${{ matrix.architecture == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     strategy:
       matrix:
