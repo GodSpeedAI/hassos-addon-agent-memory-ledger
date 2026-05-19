@@ -27,18 +27,14 @@
     {
       "fileMatch": ["docker-dependencies/ruvector-pg17$"],
       "matchStringsStrategy": "any",
-      "matchStrings": [
-        "FROM rust:(?<currentValue>[0-9.]+)-slim-bookworm"
-      ],
+      "matchStrings": ["FROM rust:(?<currentValue>[0-9.]+)-slim-bookworm"],
       "datasourceTemplate": "docker",
       "depNameTemplate": "library/rust"
     },
     {
       "fileMatch": ["docker-dependencies/timescaledb-tools$"],
       "matchStringsStrategy": "any",
-      "matchStrings": [
-        "ARG GO_VERSION=(?<currentValue>[0-9.]+)"
-      ],
+      "matchStrings": ["ARG GO_VERSION=(?<currentValue>[0-9.]+)"],
       "datasourceTemplate": "docker",
       "depNameTemplate": "library/golang"
     },
@@ -52,7 +48,10 @@
       "depNameTemplate": "cargo-pgrx"
     },
     {
-      "fileMatch": ["docker-dependencies/timescaledb-toolkit-pg16$", "docker-dependencies/timescaledb-toolkit-pg17$"],
+      "fileMatch": [
+        "docker-dependencies/timescaledb-toolkit-pg16$",
+        "docker-dependencies/timescaledb-toolkit-pg17$"
+      ],
       "matchStringsStrategy": "any",
       "matchStrings": [
         "cargo install --version '(?<currentValue>[0-9.]+)' --locked --force cargo-pgrx"

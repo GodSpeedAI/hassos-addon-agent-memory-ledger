@@ -59,14 +59,14 @@ ZeroClaw / SEA Forge Agents
 
 **PostgreSQL is canonical.** Everything else is derived or transport.
 
-| Component           | Role                                           | Canonical? |
-| ------------------- | ---------------------------------------------- | ---------- |
-| PostgreSQL          | Append-only event and governance persistence   | Yes        |
-| TimescaleDB         | Temporal scaling for event hypertables         | Yes        |
-| NATS JetStream      | Transport and replay surface for SEA Forge     | No         |
-| Oxigraph            | Rebuildable RDF/SPARQL semantic projection     | No         |
-| RuVector            | Vector similarity search over qualified memory | No         |
-| Audit views         | Derived evidence views over canonical history  | No         |
+| Component      | Role                                           | Canonical? |
+| -------------- | ---------------------------------------------- | ---------- |
+| PostgreSQL     | Append-only event and governance persistence   | Yes        |
+| TimescaleDB    | Temporal scaling for event hypertables         | Yes        |
+| NATS JetStream | Transport and replay surface for SEA Forge     | No         |
+| Oxigraph       | Rebuildable RDF/SPARQL semantic projection     | No         |
+| RuVector       | Vector similarity search over qualified memory | No         |
+| Audit views    | Derived evidence views over canonical history  | No         |
 
 ## Quick Start for SEA Forge / ZeroClaw
 
@@ -932,23 +932,23 @@ health:
 
 Options:
 
-| Option    | Default     | Purpose                                              |
-| --------- | ----------- | ---------------------------------------------------- |
-| `enabled` | `true`      | Enable or disable the health HTTP server             |
-| `bind`    | `127.0.0.1` | Network interface (localhost = internal only)        |
-| `port`    | `8099`      | HTTP health check port                               |
+| Option    | Default     | Purpose                                       |
+| --------- | ----------- | --------------------------------------------- |
+| `enabled` | `true`      | Enable or disable the health HTTP server      |
+| `bind`    | `127.0.0.1` | Network interface (localhost = internal only) |
+| `port`    | `8099`      | HTTP health check port                        |
 
 The health server starts before the bridge connects to dependencies, so it is
 always available for liveness checks even during startup or connection failures.
 
 ### Endpoints
 
-| Endpoint       | Method | Success                  | Failure                          |
-| -------------- | ------ | ------------------------ | -------------------------------- |
-| `/healthz`     | GET    | `200 {"status":"ok"}`    | `503 {"status":"unhealthy",...}` |
-| `/readyz`      | GET    | `200 {"status":"ready"}` | `503 {"status":"not_ready",...}` |
-| `/metrics`     | GET    | `200` Prometheus text    | `200` (always 200)               |
-| `/metrics-lite`| GET    | `200 {...}`              | `200 {...}` (always 200)         |
+| Endpoint        | Method | Success                  | Failure                          |
+| --------------- | ------ | ------------------------ | -------------------------------- |
+| `/healthz`      | GET    | `200 {"status":"ok"}`    | `503 {"status":"unhealthy",...}` |
+| `/readyz`       | GET    | `200 {"status":"ready"}` | `503 {"status":"not_ready",...}` |
+| `/metrics`      | GET    | `200` Prometheus text    | `200` (always 200)               |
+| `/metrics-lite` | GET    | `200 {...}`              | `200 {...}` (always 200)         |
 
 ### `/healthz` — Liveness
 
@@ -1127,18 +1127,18 @@ message producer to comply with the SEA Event Contract in
 
 ### Comprehensive Failure Reference
 
-| Symptom | `/readyz` check | Likely Cause | Resolution |
-| ------- | ---------------- | ------------ | ---------- |
-| Postgres not ready | `postgres: error: ...` | PostgreSQL still starting or crashed | Check add-on logs for `postgres` service errors. Verify `max_connections` and memory limits. |
-| Schema not found | `schema: agent_memory schema NOT found` | `agent_memory.enabled=false` or init script failed | Enable `agent_memory.enabled=true`. Check init-addon logs. |
-| Migrations none | `migrations: none recorded` | Fresh install or init script skipped migrations | Normal on first start. If persistent, check init-addon logs. |
-| bridge_worker role error | `bridge_worker_role: error: ...` | Role not created or password mismatch | Set `security.bridge_worker_password`. Run `validate_security.sh`. |
-| NATS unreachable | `nats: disconnected` | NATS server not running or wrong URL | Verify `sea_bridge.nats.url`. Ensure NATS server is running and reachable. |
-| JetStream error | `jetstream: error: ...` | JetStream not enabled on NATS server | Start NATS with `-js` flag. Check NATS server configuration. |
-| Consumer missing | `consumer: error: ...` | Durable consumer not created | Bridge creates it on first start. If deleted, restart the add-on. |
-| Migration checksum mismatch | (in add-on logs) | SQL file was modified after migration | Do not edit applied migrations. Add new numbered SQL files instead. |
-| Invalid SEA event contract | (in add-on logs) | Inbound message failed contract validation | Check `event_log.delivery_attempts.error_message` for details. Fix the message producer. |
-| Auth failure | (in add-on logs) | Wrong password for bridge_worker role | Verify `security.bridge_worker_password` matches. Run `validate_security.sh`. |
+| Symptom                     | `/readyz` check                         | Likely Cause                                       | Resolution                                                                                   |
+| --------------------------- | --------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Postgres not ready          | `postgres: error: ...`                  | PostgreSQL still starting or crashed               | Check add-on logs for `postgres` service errors. Verify `max_connections` and memory limits. |
+| Schema not found            | `schema: agent_memory schema NOT found` | `agent_memory.enabled=false` or init script failed | Enable `agent_memory.enabled=true`. Check init-addon logs.                                   |
+| Migrations none             | `migrations: none recorded`             | Fresh install or init script skipped migrations    | Normal on first start. If persistent, check init-addon logs.                                 |
+| bridge_worker role error    | `bridge_worker_role: error: ...`        | Role not created or password mismatch              | Set `security.bridge_worker_password`. Run `validate_security.sh`.                           |
+| NATS unreachable            | `nats: disconnected`                    | NATS server not running or wrong URL               | Verify `sea_bridge.nats.url`. Ensure NATS server is running and reachable.                   |
+| JetStream error             | `jetstream: error: ...`                 | JetStream not enabled on NATS server               | Start NATS with `-js` flag. Check NATS server configuration.                                 |
+| Consumer missing            | `consumer: error: ...`                  | Durable consumer not created                       | Bridge creates it on first start. If deleted, restart the add-on.                            |
+| Migration checksum mismatch | (in add-on logs)                        | SQL file was modified after migration              | Do not edit applied migrations. Add new numbered SQL files instead.                          |
+| Invalid SEA event contract  | (in add-on logs)                        | Inbound message failed contract validation         | Check `event_log.delivery_attempts.error_message` for details. Fix the message producer.     |
+| Auth failure                | (in add-on logs)                        | Wrong password for bridge_worker role              | Verify `security.bridge_worker_password` matches. Run `validate_security.sh`.                |
 
 ## Backup and Restore
 

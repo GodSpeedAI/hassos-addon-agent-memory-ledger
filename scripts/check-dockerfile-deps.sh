@@ -42,6 +42,7 @@ for file in "${DOCKERFILES[@]}"; do
 		lineno="$(echo "$line" | cut -d: -f1)"
 		content="$(echo "$line" | cut -d: -f2-)"
 		# Skip comment lines
+		# shellcheck disable=SC2001
 		trimmed="$(echo "$content" | sed 's/^[[:space:]]*//')"
 		if [[ "$trimmed" == \#* ]]; then
 			continue
@@ -115,6 +116,7 @@ if [ -f "$REQ_FILE" ]; then
 		lineno="$(echo "$line" | cut -d: -f1)"
 		content="$(echo "$line" | cut -d: -f2-)"
 		# Skip comments and blank lines
+		# shellcheck disable=SC2001
 		trimmed="$(echo "$content" | sed 's/^[[:space:]]*//')"
 		if [[ -z "$trimmed" ]] || [[ "$trimmed" == \#* ]]; then
 			continue

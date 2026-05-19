@@ -28,12 +28,7 @@
     },
     "source": {
       "type": "string",
-      "enum": [
-        "zeroclaw",
-        "sea-forge",
-        "home-assistant",
-        "other"
-      ],
+      "enum": ["zeroclaw", "sea-forge", "home-assistant", "other"],
       "description": "Originating system."
     },
     "source_agent": {

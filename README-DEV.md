@@ -58,14 +58,14 @@ ruff check agent_memory_ledger/rootfs/usr/bin/sea_nats_bridge.py tests/
 
 The test suite covers 168 tests across 6 modules:
 
-| Module | Tests | Coverage area |
-|---|---|---|
-| `test_subject_routing.py` | 21 | Subject family extraction, canonical route mapping, message ID derivation |
-| `test_envelope_validation.py` | 47 | Envelope validation, payload validation, contract validation, fail-open/fail-closed |
-| `test_bridge.py` | 17 | Inbound processing, idempotency (inbox + outbox), transactionality, outbound dispatch |
-| `test_health.py` | 15 | `/healthz`, `/readyz`, `/metrics-lite`, HTTP routing |
-| `test_sql_schema.py` | 55 | SQL schema smoke tests, least-privilege role grants, constraint validation |
-| `test_config.py` | 5 | BridgeConfig defaults, env loading, DSN construction |
+| Module                        | Tests | Coverage area                                                                         |
+| ----------------------------- | ----- | ------------------------------------------------------------------------------------- |
+| `test_subject_routing.py`     | 21    | Subject family extraction, canonical route mapping, message ID derivation             |
+| `test_envelope_validation.py` | 47    | Envelope validation, payload validation, contract validation, fail-open/fail-closed   |
+| `test_bridge.py`              | 17    | Inbound processing, idempotency (inbox + outbox), transactionality, outbound dispatch |
+| `test_health.py`              | 15    | `/healthz`, `/readyz`, `/metrics-lite`, HTTP routing                                  |
+| `test_sql_schema.py`          | 55    | SQL schema smoke tests, least-privilege role grants, constraint validation            |
+| `test_config.py`              | 5     | BridgeConfig defaults, env loading, DSN construction                                  |
 
 All tests are pure unit tests using mocks — no PostgreSQL or NATS required.
 
@@ -116,18 +116,18 @@ at the end.
 
 ### Environment Variables
 
-| Variable         | Required | Example                        |
-| ---------------- | -------- | ------------------------------ |
-| `NATS_URL`       | Yes      | `nats://127.0.0.1:4222`       |
-| `PGHOST`         | Yes      | `127.0.0.1`                   |
-| `PGPORT`         | Yes      | `5432`                        |
-| `PGDATABASE`     | Yes      | `agent_memory`                |
-| `PGUSER`         | Yes      | `bridge_worker`               |
-| `PGPASSWORD`     | Yes      | your-password                 |
-| `HEALTH_URL`     | Yes      | `http://127.0.0.1:8099`       |
-| `SMOKE_WAIT`     | No       | Seconds to wait (default: `5`) |
-| `PG_SUPERUSER`   | No       | For identity setup if PGUSER lacks INSERT on governance.identities |
-| `PG_SUPERPASSWORD` | No     | Password for PG_SUPERUSER     |
+| Variable           | Required | Example                                                            |
+| ------------------ | -------- | ------------------------------------------------------------------ |
+| `NATS_URL`         | Yes      | `nats://127.0.0.1:4222`                                            |
+| `PGHOST`           | Yes      | `127.0.0.1`                                                        |
+| `PGPORT`           | Yes      | `5432`                                                             |
+| `PGDATABASE`       | Yes      | `agent_memory`                                                     |
+| `PGUSER`           | Yes      | `bridge_worker`                                                    |
+| `PGPASSWORD`       | Yes      | your-password                                                      |
+| `HEALTH_URL`       | Yes      | `http://127.0.0.1:8099`                                            |
+| `SMOKE_WAIT`       | No       | Seconds to wait (default: `5`)                                     |
+| `PG_SUPERUSER`     | No       | For identity setup if PGUSER lacks INSERT on governance.identities |
+| `PG_SUPERPASSWORD` | No       | Password for PG_SUPERUSER                                          |
 
 ### Running from a Dev Machine
 
@@ -179,10 +179,10 @@ from your dev machine pointing to the HA host's PostgreSQL port (if exposed).
 
 ### Exit Codes
 
-| Code | Meaning                       |
-| ---- | ----------------------------- |
-| 0    | All checks passed             |
-| 1    | One or more checks failed     |
+| Code | Meaning                   |
+| ---- | ------------------------- |
+| 0    | All checks passed         |
+| 1    | One or more checks failed |
 
 ### Cleanup
 
@@ -292,29 +292,29 @@ reproducible builds. Renovate creates PRs to update them. A CI gate
 
 ### Pinned Dependency Locations
 
-| Dependency | Where pinned | Notes |
-|---|---|---|
-| Home Assistant base image | `build.yaml`, `Dockerfile` ARG | Renovate manages via docker datasource |
-| TimescaleDB | `Dockerfile` FROM lines, `docker-dependencies/*` | All pinned to `2.26.4-pgNN`. Renovate groups into `timescaledb` |
-| PostGIS | `docker-dependencies/postgis-pg*`, `dependencies.yaml` matrix | Version passed as `VERSION` build arg |
-| pgAgent | `docker-dependencies/pgagent-pg*`, `dependencies.yaml` matrix | Git tag checkout |
-| TimescaleDB Toolkit | `docker-dependencies/timescaledb-toolkit-pg*`, `dependencies.yaml` matrix | Git tag checkout |
-| System Stats | `docker-dependencies/postgresql-extension-system-stat-pg*`, `dependencies.yaml` matrix | Git tag checkout |
-| RuVector | `docker-dependencies/ruvector-pg17`, `dependencies.yaml` | Git tag checkout |
-| Rust (RuVector builder) | `docker-dependencies/ruvector-pg17` FROM line | Pinned to `1.87.0-slim-bookworm` |
-| Go (timescaledb-tools) | `docker-dependencies/timescaledb-tools` ARG | Pinned to `1.24.4` |
-| cargo-pgrx | `docker-dependencies/*-toolkit-*`, `docker-dependencies/ruvector-pg17` | Pinned per Dockerfile |
-| Oxigraph | `Dockerfile` ARG + SHA256 checksums | Pinned version with integrity check |
-| Python (bridge worker) | `requirements-bridge.txt` | Exact `==` pins required by CI |
-| Alpine packages | `Dockerfile` apk add | Floating (Alpine repo pins) |
+| Dependency                | Where pinned                                                                           | Notes                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Home Assistant base image | `build.yaml`, `Dockerfile` ARG                                                         | Renovate manages via docker datasource                          |
+| TimescaleDB               | `Dockerfile` FROM lines, `docker-dependencies/*`                                       | All pinned to `2.26.4-pgNN`. Renovate groups into `timescaledb` |
+| PostGIS                   | `docker-dependencies/postgis-pg*`, `dependencies.yaml` matrix                          | Version passed as `VERSION` build arg                           |
+| pgAgent                   | `docker-dependencies/pgagent-pg*`, `dependencies.yaml` matrix                          | Git tag checkout                                                |
+| TimescaleDB Toolkit       | `docker-dependencies/timescaledb-toolkit-pg*`, `dependencies.yaml` matrix              | Git tag checkout                                                |
+| System Stats              | `docker-dependencies/postgresql-extension-system-stat-pg*`, `dependencies.yaml` matrix | Git tag checkout                                                |
+| RuVector                  | `docker-dependencies/ruvector-pg17`, `dependencies.yaml`                               | Git tag checkout                                                |
+| Rust (RuVector builder)   | `docker-dependencies/ruvector-pg17` FROM line                                          | Pinned to `1.87.0-slim-bookworm`                                |
+| Go (timescaledb-tools)    | `docker-dependencies/timescaledb-tools` ARG                                            | Pinned to `1.24.4`                                              |
+| cargo-pgrx                | `docker-dependencies/*-toolkit-*`, `docker-dependencies/ruvector-pg17`                 | Pinned per Dockerfile                                           |
+| Oxigraph                  | `Dockerfile` ARG + SHA256 checksums                                                    | Pinned version with integrity check                             |
+| Python (bridge worker)    | `requirements-bridge.txt`                                                              | Exact `==` pins required by CI                                  |
+| Alpine packages           | `Dockerfile` apk add                                                                   | Floating (Alpine repo pins)                                     |
 
 ### Approved Exceptions
 
-| Exception | Location | Rationale |
-|---|---|---|
-| `:latest` tag | `Dockerfile` line 17 (timescaledb-tools) | Upstream has no versioned releases. Tools are rebuilt from HEAD on every dependencies workflow run. |
-| `:latest` tag | `docker-dependencies/timescaledb-tools` ARG | Same as above — `go install @latest` |
-| `--allow-untrusted` | `Dockerfile` line 143 | Alpine v3.23 community repo is unsigned. Package `gdal-driver-postgisraster` is only available there. Repo URL is pinned to v3.23 (not edge). |
+| Exception           | Location                                    | Rationale                                                                                                                                     |
+| ------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `:latest` tag       | `Dockerfile` line 17 (timescaledb-tools)    | Upstream has no versioned releases. Tools are rebuilt from HEAD on every dependencies workflow run.                                           |
+| `:latest` tag       | `docker-dependencies/timescaledb-tools` ARG | Same as above — `go install @latest`                                                                                                          |
+| `--allow-untrusted` | `Dockerfile` line 143                       | Alpine v3.23 community repo is unsigned. Package `gdal-driver-postgisraster` is only available there. Repo URL is pinned to v3.23 (not edge). |
 
 These exceptions are registered in `scripts/check-dockerfile-deps.sh`
 (`APPROVED_LATEST` array) and will not cause CI failures.
