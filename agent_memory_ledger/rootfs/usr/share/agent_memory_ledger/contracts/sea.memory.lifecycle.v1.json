@@ -57,12 +57,7 @@
     "payload": {
       "type": "object",
       "description": "Memory lifecycle transition payload.",
-      "required": [
-        "memory_item_id",
-        "new_status",
-        "changed_by",
-        "reason"
-      ],
+      "required": ["memory_item_id", "new_status", "changed_by", "reason"],
       "properties": {
         "memory_item_id": {
           "type": "string",

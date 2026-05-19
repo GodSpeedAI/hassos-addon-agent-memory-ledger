@@ -57,10 +57,7 @@
     "payload": {
       "type": "object",
       "description": "Governance action request payload.",
-      "required": [
-        "requesting_identity_id",
-        "requested_action_type"
-      ],
+      "required": ["requesting_identity_id", "requested_action_type"],
       "properties": {
         "requesting_identity_id": {
           "type": "string",

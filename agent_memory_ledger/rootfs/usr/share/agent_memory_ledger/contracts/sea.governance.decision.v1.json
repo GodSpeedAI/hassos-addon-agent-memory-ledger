@@ -57,11 +57,7 @@
     "payload": {
       "type": "object",
       "description": "Governance decision payload.",
-      "required": [
-        "request_id",
-        "decision",
-        "policy_version_id"
-      ],
+      "required": ["request_id", "decision", "policy_version_id"],
       "properties": {
         "request_id": {
           "type": "string",

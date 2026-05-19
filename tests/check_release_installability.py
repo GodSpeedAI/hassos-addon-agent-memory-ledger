@@ -3,7 +3,6 @@
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DEPLOY_WORKFLOW = ROOT / ".github" / "workflows" / "deploy.yaml"
 README = ROOT / "README.md"

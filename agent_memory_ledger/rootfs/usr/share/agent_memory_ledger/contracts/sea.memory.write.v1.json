@@ -57,10 +57,7 @@
     "payload": {
       "type": "object",
       "description": "Memory write payload.",
-      "required": [
-        "source_agent",
-        "content"
-      ],
+      "required": ["source_agent", "content"],
       "properties": {
         "source_agent": {
           "type": "string",

@@ -3,7 +3,6 @@
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 FILES = [
     ROOT / "agent_memory_ledger" / "docker-dependencies" / "pgagent-pg16",
