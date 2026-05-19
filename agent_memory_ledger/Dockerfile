@@ -277,8 +277,7 @@ RUN --mount=type=cache,id=apk-${TARGETARCH}-${TARGETVARIANT},sharing=locked,targ
     set -ex \
     && apk add \
         python3 \
-        py3-pip \
-    && python3 -m ensurepip --upgrade --break-system-packages
+        py3-pip
 
 COPY requirements-bridge.txt /tmp/requirements-bridge.txt
 # hadolint ignore=DL3018,DL3019,DL3042
