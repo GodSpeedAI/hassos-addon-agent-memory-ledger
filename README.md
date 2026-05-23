@@ -916,7 +916,8 @@ optional fields produce a warning but the message is still processed).
 
 The bridge validates inbound messages against a formal event contract defined in
 JSON Schema files under `rootfs/usr/share/agent_memory_ledger/contracts/`. See
-`docs/SEA_EVENT_CONTRACT.md` for the full contract specification.
+`docs/SEA_EVENT_CONTRACT.md` for the full contract specification and
+`docs/TELEMETRY_INTEGRATION.md` for detailed telemetry integration architecture, deduplication logic, and memory lifecycle actuators.
 
 ## Health Endpoints
 

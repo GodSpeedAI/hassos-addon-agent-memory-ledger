@@ -184,7 +184,7 @@ CANONICAL_ROUTES: dict[str, dict[str, Any]] = {
     "sea.memory.lifecycle": {
         "schema": "event_log",
         "table": "inbox_events",
-        "required": ["memory_item_id", "new_status", "changed_by", "reason"],
+        "required": ["memory_item_id", "new_status", "changed_by"],
         "fail_open": False,
     },
 }
@@ -204,12 +204,24 @@ def derive_message_id(
     payload: bytes,
     headers: dict[str, str],
     idempotency_header: str,
+    data: dict[str, Any] | None = None,
 ) -> str:
-    """Derive a message ID from header, NATS message ID, or sha256 hash."""
+    """Derive a message ID from header, NATS message ID, envelope event_id, or sha256 hash.
+
+    Priority order (per SEA Event Contract):
+      1. Custom idempotency header (e.g. X-Idempotency-Key)
+      2. Nats-Msg-Id header
+      3. Envelope event_id (UUID from the v1 envelope)
+      4. SHA-256 of subject + payload bytes (fallback)
+    """
     if idempotency_header in headers:
         return headers[idempotency_header]
     if "Nats-Msg-Id" in headers:
         return headers["Nats-Msg-Id"]
+    if data and isinstance(data, dict):
+        event_id = data.get("event_id")
+        if event_id and isinstance(event_id, str) and event_id.strip():
+            return event_id
     digest = hashlib.sha256(subject.encode() + payload).hexdigest()
     return f"sha256-{digest[:40]}"
 
@@ -269,6 +281,18 @@ _VALID_MEMORY_STATUSES = {
     "expired",
 }
 
+# Valid lifecycle state machine arcs (source → set of legal targets).
+# Any transition not in this map is illegal and must be rejected.
+VALID_TRANSITIONS: dict[str, frozenset[str]] = {
+    "observed":    frozenset({"candidate"}),
+    "candidate":   frozenset({"accepted", "rejected"}),
+    "accepted":    frozenset({"verified", "expired"}),
+    "verified":    frozenset({"superseded"}),
+    "superseded":  frozenset(),
+    "rejected":    frozenset(),
+    "expired":     frozenset(),
+}
+
 # Required common envelope fields
 _ENVELOPE_REQUIRED = {
     "schema_version",
@@ -298,7 +322,6 @@ _PAYLOAD_REQUIRED: dict[str, set[str]] = {
         "memory_item_id",
         "new_status",
         "changed_by",
-        "reason",
     },
 }
 
@@ -685,8 +708,6 @@ class SEABridge:
         payload = msg.data
         headers = dict(msg.headers) if msg.headers else {}
 
-        msg_id = derive_message_id(subject, payload, headers, self.cfg.idempotency_header)
-
         # Reject non-JSON payloads
         try:
             data = json.loads(payload)
@@ -701,6 +722,14 @@ class SEABridge:
             await self._dead_letter(msg, subject, payload, "invalid_envelope")
             await msg.ack()
             return
+
+        msg_id = derive_message_id(
+            subject=subject,
+            payload=payload,
+            headers=headers,
+            idempotency_header=self.cfg.idempotency_header,
+            data=data,
+        )
 
         family = subject_family(subject)
         route = CANONICAL_ROUTES.get(family)
@@ -952,9 +981,9 @@ class SEABridge:
                 ],
             )
         elif table == "inbox_events":
-            # External lifecycle requests are canonical inbox facts until a
-            # separate governed transition promotes them into memory.lifecycle_audit.
-            pass
+            # Actuate memory lifecycle transition: update memory.items status
+            # and append to the append-only lifecycle_audit trail.
+            await self._actuate_table(cur, table, p, source_agent, inbox_id)
 
         # Record delivery attempt
         await cur.execute(
@@ -971,6 +1000,82 @@ class SEABridge:
             "UPDATE event_log.inbox_events SET processed_at = now() WHERE id = %s",
             [inbox_id],
         )
+
+    async def _actuate_table(
+        self,
+        cur: psycopg.AsyncCursor,
+        table: str,
+        p: dict[str, Any],
+        source_agent: str,
+        inbox_id: uuid.UUID,
+    ) -> None:
+        """Actuate memory lifecycle transition: update memory.items status
+        and append to the append-only lifecycle_audit trail.
+        """
+        if table == "inbox_events":
+            memory_item_id = p.get("memory_item_id")
+            new_status = p.get("new_status")
+
+            # source_agent comes from the validated envelope field; it reflects
+            # the claimed identity of the publisher. Full authentication requires
+            # NATS ACL enforcement at the infrastructure level (see docs/TELEMETRY_INTEGRATION.md).
+            changed_by = p.get("changed_by") or source_agent
+            reason = p.get("reason", "")
+            if memory_item_id and new_status:
+                # Capture current status for audit trail (old_status)
+                await cur.execute(
+                    "SELECT status FROM memory.items WHERE id = %s::uuid FOR UPDATE",
+                    [memory_item_id],
+                )
+                row = await cur.fetchone()
+                if row is not None:
+                    old_status = row[0]
+                    allowed = VALID_TRANSITIONS.get(old_status, frozenset())
+                    if new_status not in allowed:
+                        LOG.warning(
+                            "Illegal lifecycle transition rejected: %s %s -> %s (allowed: %s)",
+                            memory_item_id, old_status, new_status, sorted(allowed),
+                        )
+                        # Raise to abort the transaction (fail-closed, consistent with
+                        # governance semantics). JetStream's redelivery cycle will
+                        # dead-letter this message after max_deliver attempts.
+                        raise ValueError(
+                            f"Illegal transition: {old_status} -> {new_status} "
+                            f"for memory_item_id={memory_item_id}"
+                        )
+                    await cur.execute(
+                        """
+                        UPDATE memory.items
+                           SET status = %s::memory_status,
+                               updated_at = now()
+                         WHERE id = %s::uuid
+                        """,
+                        [new_status, memory_item_id],
+                    )
+                    await cur.execute(
+                        """
+                        INSERT INTO memory.lifecycle_audit
+                            (memory_item_id, old_status, new_status, changed_by, reason)
+                        VALUES (%s::uuid, %s::memory_status, %s::memory_status, %s, %s)
+                        """,
+                        [memory_item_id, old_status, new_status, changed_by, reason],
+                    )
+                    LOG.info(
+                        "Lifecycle transition: %s %s -> %s (by %s)",
+                        memory_item_id, old_status, new_status, changed_by,
+                    )
+                else:
+                    LOG.warning(
+                        "Lifecycle transition requested for unknown memory_item_id=%s",
+                        memory_item_id,
+                    )
+            else:
+                LOG.debug(
+                    "Lifecycle payload missing memory_item_id or new_status; skipping actuate "
+                    "(memory_item_id=%r, new_status=%r)",
+                    memory_item_id,
+                    new_status,
+                )
 
     # ── Outbound: Postgres → NATS ──────────────────────────────────────────
 
@@ -1111,7 +1216,12 @@ class SEABridge:
                     """,
                     [
                         subject,
-                        derive_message_id(subject, payload, {}, self.cfg.idempotency_header),
+                        derive_message_id(
+                            subject=subject,
+                            payload=payload,
+                            headers={},
+                            idempotency_header=self.cfg.idempotency_header,
+                        ),
                         payload.decode(errors="replace"),
                     ],
                 )

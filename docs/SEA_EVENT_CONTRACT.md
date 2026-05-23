@@ -363,9 +363,9 @@ Memory writes always enter the system with status `candidate`. Promotion to `acc
 
 | Field              | Type            | Description                                                                                                                                   |
 | ------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `target_memory_id` | `string`        | The ID of the memory item this lifecycle event applies to. Must reference an existing memory item.                                            |
-| `transition`       | `string (enum)` | Lifecycle transition. One of: `candidate→accepted`, `accepted→verified`, `verified→superseded`, `candidate→rejected`, `accepted→expired`.     |
-| `actor_identity`   | `string`        | Identity reference of the agent or system performing the transition.                                                                          |
+| `memory_item_id`   | `string`        | The ID of the memory item this lifecycle event applies to. Must reference an existing memory item.                                            |
+| `new_status`       | `string (enum)` | Target lifecycle status. One of: `observed`, `candidate`, `accepted`, `verified`, `superseded`, `rejected`, `expired`.                        |
+| `changed_by`       | `string`        | Identity reference of the agent or system performing the transition.                                                                          |
 | `reason`           | `string`        | Machine-readable reason code for the transition. Example: `governance_approved`, `verification_passed`, `superseded_by_newer`, `ttl_expired`. |
 
 **Optional payload fields:**
@@ -392,9 +392,9 @@ Memory writes always enter the system with status `candidate`. Promotion to `acc
   "causation_id": "550e8400-e29b-41d4-a716-446655440000",
   "trace_id": "trace-xyz-456",
   "payload": {
-    "target_memory_id": "550e8400-e29b-41d4-a716-446655440000",
-    "transition": "candidate→accepted",
-    "actor_identity": "zeroclaw/memory-governor@v1.0",
+    "memory_item_id": "550e8400-e29b-41d4-a716-446655440000",
+    "new_status": "accepted",
+    "changed_by": "zeroclaw/memory-governor@v1.0",
     "reason": "governance_approved",
     "human_readable_reason": "Memory passed governance review: content is consistent with observed events and policy v1",
     "policy_version": "v1",
