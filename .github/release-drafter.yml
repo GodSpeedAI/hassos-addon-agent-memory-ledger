@@ -2,17 +2,27 @@
 name-template: 'v$RESOLVED_VERSION 🌈'
 tag-template: 'v$RESOLVED_VERSION'
 categories:
+  # Labels aligned with the pr-labels gate's valid set
+  # (hassio-addons/workflows pr-labels.yaml): breaking-change, bugfix,
+  # documentation, enhancement, refactor, performance, new-feature,
+  # maintenance, ci, dependencies, translations.
   - title: '🚀 Features'
     labels:
-      - 'feature'
+      - 'new-feature'
       - 'enhancement'
   - title: '🐛 Bug Fixes'
     labels:
-      - 'fix'
       - 'bugfix'
-      - 'bug'
+      - 'breaking-change'
   - title: '🧰 Maintenance'
-    label: 'chore'
+    labels:
+      - 'maintenance'
+      - 'refactor'
+      - 'performance'
+      - 'ci'
+      - 'dependencies'
+      - 'documentation'
+      - 'translations'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 change-title-escapes: '\<*_&'   # You can add # and @ to disable mentions, and add ` to disable code blocks.
 version-resolver:

@@ -389,7 +389,8 @@ connects PostgreSQL to NATS JetStream. Key development notes:
 
 The bridge validates inbound messages against JSON Schema files in
 `rootfs/usr/share/agent_memory_ledger/contracts/`. See
-`docs/SEA_EVENT_CONTRACT.md` for the full specification.
+`docs/SEA_EVENT_CONTRACT.md` for the full contract specification and
+`docs/TELEMETRY_INTEGRATION.md` for details on message ID resolution, deduplication, and database actuators for the memory lifecycle.
 
 When modifying the contract:
 

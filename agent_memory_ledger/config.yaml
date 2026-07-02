@@ -1,6 +1,6 @@
 ---
 name: Agent Memory Ledger
-version: dev
+version: 0.4.0
 slug: agent_memory_ledger
 description: "PostgreSQL, TimescaleDB, and RuVector infrastructure for
   governed autonomous event history and qualified agent memory"

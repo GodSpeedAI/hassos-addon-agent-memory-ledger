@@ -1,3 +1,59 @@
-\.vscode/
-tmp/
+# Virtual Environment
+\.venv/
+\.venv*/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
+# Python Cache
+__pycache__/
+*.py[cod]
+*.so
+
+# Python Development
+.python-version
+dist/
+build/
+wheels/
+*.egg-info/
+
+# Environment Variables
+.env
+.env.*
+*.env
+
+# IDE
+.vscode/
+.idea/
+.vs/
+*.swp
+*.swo
+*.swo
+*.swo
+
+# Local agent / editor working state (not addon source)
+.agents/
+.omc/
+.serena/
+.logs/
+
+# Temporary Files
+/tmp
+*.tmp
+tmp
+/tmp/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+*.db3
+
+# Other
+*.bak

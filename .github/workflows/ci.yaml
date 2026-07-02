@@ -54,9 +54,14 @@ jobs:
           persist-credentials: false
 
       - name: Run App Lint
+        # community: false — this is a standalone repo with its own deploy.yaml
+        # and pre-built images, NOT part of the "HA Community Add-ons" shared
+        # builder. Community mode enforces version=dev (substituted at build),
+        # which is incompatible with a pre-built-image addon that must carry a
+        # real committed version for Home Assistant to pull.
         uses: frenck/action-addon-linter@f995494fd84fae6310d23617e66d0e37de4f14eb
         with:
-          community: true
+          community: false
           path: "./${{ needs.information.outputs.target }}"
 
   lint-hadolint:

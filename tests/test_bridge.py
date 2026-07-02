@@ -146,6 +146,8 @@ class TestInboundProcessing:
     @pytest.mark.asyncio
     async def test_valid_memory_lifecycle(self, bridge_module):
         bridge, db, cur, nc, js = _make_bridge(bridge_module)
+        inbox_id = uuid.uuid4()
+        cur.fetchone = AsyncMock(side_effect=[(inbox_id,), ("candidate",)])
         envelope = {
             "schema_version": "v1",
             "event_id": str(uuid.uuid4()),
@@ -157,6 +159,7 @@ class TestInboundProcessing:
                 "changed_by": "test-agent",
                 "reason": "governance_approved",
             },
+            "provenance": {"origin": "test-agent", "chain": []},
         }
         msg = _make_nats_msg(
             "sea.memory.lifecycle.accepted",
@@ -548,3 +551,112 @@ class TestOutboundDispatch:
 
         # Should fall back to core NATS
         nc.publish.assert_awaited_once()
+
+
+class TestLifecycleActuator:
+    """Unit tests for the inbox_events lifecycle actuator in _actuate_table."""
+
+    @pytest.mark.asyncio
+    async def test_happy_path_executes_update_and_audit_insert(self, bridge_module):
+        """Happy path: found item, legal transition → UPDATE + INSERT lifecycle_audit."""
+        bridge, db, cur, nc, js = _make_bridge(bridge_module)
+        item_id = str(uuid.uuid4())
+        # SELECT returns current status "candidate"
+        cur.fetchone = AsyncMock(return_value=("candidate",))
+
+        await bridge._actuate_table(
+            cur=cur,
+            table="inbox_events",
+            p={
+                "memory_item_id": item_id,
+                "new_status": "accepted",
+                "changed_by": "zeroclaw/agent@v0.7",
+                "reason": "governance_approved",
+            },
+            source_agent="zeroclaw/agent@v0.7",
+            inbox_id=uuid.uuid4(),
+        )
+
+        calls = [call_args.args[0].strip() for call_args in cur.execute.call_args_list]
+        assert any("SELECT status FROM memory.items" in c for c in calls), \
+            "Expected FOR UPDATE SELECT"
+        assert any("UPDATE memory.items" in c for c in calls), \
+            "Expected UPDATE memory.items"
+        assert any("INSERT INTO memory.lifecycle_audit" in c for c in calls), \
+            "Expected INSERT INTO lifecycle_audit"
+
+    @pytest.mark.asyncio
+    async def test_unknown_memory_item_id_skips_update(self, bridge_module):
+        """If the item does not exist, no UPDATE or INSERT should be executed."""
+        bridge, db, cur, nc, js = _make_bridge(bridge_module)
+        cur.fetchone = AsyncMock(return_value=None)
+
+        await bridge._actuate_table(
+            cur=cur,
+            table="inbox_events",
+            p={
+                "memory_item_id": str(uuid.uuid4()),
+                "new_status": "accepted",
+                "changed_by": "agent",
+                "reason": "test",
+            },
+            source_agent="agent",
+            inbox_id=uuid.uuid4(),
+        )
+
+        calls = [call_args.args[0].strip() for call_args in cur.execute.call_args_list]
+        assert not any("UPDATE memory.items" in c for c in calls)
+        assert not any("INSERT INTO memory.lifecycle_audit" in c for c in calls)
+
+    @pytest.mark.asyncio
+    async def test_illegal_transition_raises_and_no_update(self, bridge_module):
+        """An illegal FSM arc (e.g. superseded→accepted) must raise ValueError and not mutate."""
+        bridge, db, cur, nc, js = _make_bridge(bridge_module)
+        cur.fetchone = AsyncMock(return_value=("superseded",))
+
+        with pytest.raises(ValueError, match="Illegal transition"):
+            await bridge._actuate_table(
+                cur=cur,
+                table="inbox_events",
+                p={
+                    "memory_item_id": str(uuid.uuid4()),
+                    "new_status": "accepted",
+                    "changed_by": "agent",
+                    "reason": "test",
+                },
+                source_agent="agent",
+                inbox_id=uuid.uuid4(),
+            )
+
+        calls = [call_args.args[0].strip() for call_args in cur.execute.call_args_list]
+        assert not any("UPDATE memory.items" in c for c in calls)
+
+    @pytest.mark.asyncio
+    async def test_missing_memory_item_id_skips_all_sql(self, bridge_module):
+        """If memory_item_id is absent from payload, no SQL at all."""
+        bridge, db, cur, nc, js = _make_bridge(bridge_module)
+
+        await bridge._actuate_table(
+            cur=cur,
+            table="inbox_events",
+            p={"new_status": "accepted", "changed_by": "agent", "reason": "test"},
+            source_agent="agent",
+            inbox_id=uuid.uuid4(),
+        )
+
+        cur.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_missing_new_status_skips_all_sql(self, bridge_module):
+        """If new_status is absent from payload, no SQL at all."""
+        bridge, db, cur, nc, js = _make_bridge(bridge_module)
+
+        await bridge._actuate_table(
+            cur=cur,
+            table="inbox_events",
+            p={"memory_item_id": str(uuid.uuid4()), "changed_by": "agent", "reason": "test"},
+            source_agent="agent",
+            inbox_id=uuid.uuid4(),
+        )
+
+        cur.execute.assert_not_called()

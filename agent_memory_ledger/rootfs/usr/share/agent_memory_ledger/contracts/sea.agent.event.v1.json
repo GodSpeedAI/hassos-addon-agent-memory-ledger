@@ -9,7 +9,8 @@
     "event_id",
     "source_agent",
     "occurred_at",
-    "payload"
+    "payload",
+    "provenance"
   ],
   "properties": {
     "schema_version": {

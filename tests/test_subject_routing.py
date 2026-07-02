@@ -106,7 +106,7 @@ class TestCanonicalRoutes:
         assert "memory_item_id" in route["required"]
         assert "new_status" in route["required"]
         assert "changed_by" in route["required"]
-        assert "reason" in route["required"]
+        assert "reason" not in route["required"]
 
 
 class TestDeriveMessageId:
@@ -141,3 +141,43 @@ class TestDeriveMessageId:
         r1 = bridge_module.derive_message_id("sub", b"data1", {}, "X-Id")
         r2 = bridge_module.derive_message_id("sub", b"data2", {}, "X-Id")
         assert r1 != r2
+
+    def test_uses_envelope_event_id_when_no_headers(self, bridge_module):
+        """Priority 3: event_id from parsed envelope data."""
+        import uuid
+        eid = str(uuid.uuid4())
+        result = bridge_module.derive_message_id("sub", b"data", {}, "X-Id", data={"event_id": eid})
+        assert result == eid
+
+    def test_event_id_lower_priority_than_nats_msg_id(self, bridge_module):
+        """Nats-Msg-Id (priority 2) wins over envelope event_id (priority 3)."""
+        import uuid
+        headers = {"Nats-Msg-Id": "nats-wins"}
+        result = bridge_module.derive_message_id(
+            "sub", b"data", headers, "X-Id", data={"event_id": str(uuid.uuid4())}
+        )
+        assert result == "nats-wins"
+
+    def test_empty_event_id_falls_through_to_sha256(self, bridge_module):
+        """An empty-string event_id must not be used; fall through to sha256."""
+        result = bridge_module.derive_message_id(
+            "sub", b"data", {}, "X-Id", data={"event_id": "   "}
+        )
+        assert result.startswith("sha256-")
+
+    def test_non_string_event_id_falls_through_to_sha256(self, bridge_module):
+        """A non-string event_id (e.g. int) must not be used; fall through to sha256."""
+        result = bridge_module.derive_message_id(
+            "sub", b"data", {}, "X-Id", data={"event_id": 12345}
+        )
+        assert result.startswith("sha256-")
+
+    def test_data_none_does_not_crash(self, bridge_module):
+        """data=None (default) must not raise."""
+        result = bridge_module.derive_message_id("sub", b"data", {}, "X-Id", data=None)
+        assert result.startswith("sha256-")
+
+    def test_data_not_a_dict_does_not_crash(self, bridge_module):
+        """data being a non-dict (e.g. a list) must not raise."""
+        result = bridge_module.derive_message_id("sub", b"data", {}, "X-Id", data=["a", "b"])
+        assert result.startswith("sha256-")

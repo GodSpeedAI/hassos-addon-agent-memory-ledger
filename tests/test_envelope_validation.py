@@ -406,6 +406,9 @@ class TestContractValidation:
             "source_agent": "",
             "occurred_at": "bad",
             "payload": "not-an-object",
+            # provenance present so the required-field gate passes and the
+            # validator reaches the field-level (both-stage) checks below.
+            "provenance": {"origin": "test-agent", "chain": []},
         }
         result = bridge_module.validate_contract("sea.governance.request", data)
         assert result.valid is False

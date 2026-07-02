@@ -1,0 +1,37 @@
+# CONTRACTS_VERSION — canonical schema pin (WP-2, F-12)
+
+This file is the pinning source for the Syntelligent Infrastructure shared
+schema artifact. The ledger's `contracts/` directory is the **enforcement
+point** for the v1 wire schemas (validated fail-closed by `sea_nats_bridge.py`);
+the CEP repo is the source for the CEP-0008 semantic-envelope profile.
+
+Every consumer repo (SEA, godspeed_agent, SWE_SEED, edgeai, cep) vendors a copy
+of `sea.agent.event.v1.json` under `contracts/vendored/` and asserts its
+sha256 matches the pin below in a drift-check test. Editing a vendored copy by
+a single byte fails that repo's drift check.
+
+To re-sync: update the canonical file in the source repo below, recompute its
+sha256, update the pin in this file, run `scripts/sync-contracts.sh` (or copy
+manually), and update each consumer's pinned hash.
+
+## v1 wire schemas (source: this repo)
+
+| file | sha256 |
+| --- | --- |
+| sea.agent.event.v1.json | d2a245183f7a52672dec11d7a8e9236d3db78dac674ab066d944fb758443e195 |
+| sea.governance.decision.v1.json | (see file in this dir) |
+| sea.governance.request.v1.json | (see file in this dir) |
+| sea.memory.lifecycle.v1.json | (see file in this dir) |
+| sea.memory.write.v1.json | (see file in this dir) |
+
+## CEP-0008 profile + fixtures (source: ../cep)
+
+Vendored into `tests/fixtures/cep/` so the conformance test is self-contained
+(no `../cep` sibling-checkout dependency).
+
+| file | sha256 |
+| --- | --- |
+| semantic-envelope.schema.json | a2b2722006e62551d89f6c8d28a49b398d886f41cfd27aafb19e1106d79162eb |
+| v1-minimal.json | b7985a23bda37d333e49e492c31a8920f11979b5d26870c3fd57e2bf019ec17d |
+| v1-full.json | 7ce760d3c8e331e0c414f182f80c77a51cc33d9b426e03a9766f5d2c259d0270 |
+| v1-authority-decision.json | e35b67d19b00586601f35560d01d76529ecccb12513ba9e5b4ea4f8b70a9f7dc |

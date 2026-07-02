@@ -26,8 +26,13 @@ concurrency:
 jobs:
   publish:
     name: Publish ${{ matrix.arch }} image
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    # release/workflow_dispatch always run; workflow_run only when Dependencies succeeded.
+    if: >-
+      ${{ github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success' }}
+    # Native runners per arch — avoids QEMU cross-emulation, which previously
+    # made aarch64 builds pathologically slow/fragile. Mirrors ci.yaml's build job.
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -41,35 +46,77 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        # zizmor: ignore[template-injection] - matrix values are static literals
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Read add-on version
+      - name: Resolve image tag (release tag is authoritative)
         id: addon
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
         shell: bash
         run: |
-          version="$(awk '/^version:/ { print $2; exit }' agent_memory_ledger/config.yaml)"
-          if [[ -z "${version}" ]]; then
-            echo "Unable to read add-on version from agent_memory_ledger/config.yaml" >&2
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "release" ]]; then
+            # A published release is the single source of truth for the image tag.
+            version="${RELEASE_TAG#v}"
+          else
+            # workflow_run (dependency refresh) / workflow_dispatch (manual):
+            # rebuild the latest published release against refreshed dependency
+            # images so installs pick up security fixes without a new release.
+            latest_tag="$(gh release view --repo "${REPO}" --json tagName -q .tagName 2>/dev/null || true)"
+            if [[ -z "${latest_tag}" ]]; then
+              echo "::notice::No published release to rebuild; nothing to publish."
+              echo "should_run=false" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+            version="${latest_tag#v}"
+          fi
+
+          # Reject obviously non-version strings before we tag a public image.
+          if ! [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Resolved version '${version}' is not a valid semver tag."
             exit 1
           fi
+
+          # Home Assistant pulls {image}:{config_version}. If config.yaml and the
+          # release tag disagree, installs will pull a missing or wrong image.
+          # This guard makes that drift fail loudly at build time instead of
+          # silently shipping a broken release.
+          config_version="$(awk '/^version:/ { print $2; exit }' agent_memory_ledger/config.yaml)"
+          config_version="${config_version#\"}"  # tolerate optional quoting
+          config_version="${config_version%\"}"
+          if [[ "${config_version}" != "${version}" ]]; then
+            echo "::error::Version mismatch: config.yaml='${config_version}' but resolved image tag='${version}'."
+            echo "::error::Set config.yaml version to match the release tag before publishing."
+            exit 1
+          fi
+
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "should_run=true" >> "${GITHUB_OUTPUT}"
           echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "${GITHUB_OUTPUT}"
 
+      - name: Set up Docker Buildx
+        if: steps.addon.outputs.should_run == 'true'
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c
+
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        if: steps.addon.outputs.should_run == 'true'
+        uses: docker/login-action@c99871dec2022cc055c062a10cc1a1310835ceb4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and publish image
-        uses: docker/build-push-action@v6
+        if: steps.addon.outputs.should_run == 'true'
+        # zizmor: ignore[template-injection] - matrix arch and resolved semver only
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a
         with:
           context: ./agent_memory_ledger
           file: ./agent_memory_ledger/Dockerfile
@@ -86,6 +133,7 @@ jobs:
             ghcr.io/godspeedai/agent-memory-ledger/${{ matrix.arch }}:${{ steps.addon.outputs.version }}
 
       - name: Ensure package is publicly readable
+        if: steps.addon.outputs.should_run == 'true'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -95,20 +143,26 @@ jobs:
           owner="${{ github.repository_owner }}"
           echo "Setting package ${pkg} to public visibility..."
           # The GITHUB_TOKEN may lack org admin rights to change visibility.
-          # If this fails, the verify step will warn.
+          # If this fails, the verify step below will warn with a deep link.
           gh api -X PATCH "/orgs/${owner}/packages/container/${pkg}" \
             -f visibility=public 2>&1 || \
           gh api -X PATCH "/user/packages/container/${pkg}" \
             -f visibility=public 2>&1 || true
 
       - name: Verify anonymous image pull
+        if: steps.addon.outputs.should_run == 'true'
         continue-on-error: true
         shell: bash
         run: |
           image="ghcr.io/godspeedai/agent-memory-ledger/${{ matrix.arch }}:${{ steps.addon.outputs.version }}"
+          owner="${{ github.repository_owner }}"
+          arch="${{ matrix.arch }}"
+          settings_url="https://github.com/orgs/${owner}/packages/container/agent-memory-ledger%2F${arch}/settings"
           docker logout ghcr.io || true
           if ! docker manifest inspect "${image}" >/dev/null; then
             echo "::warning::Published image is not anonymously pullable: ${image}"
-            echo "::warning::Home Assistant needs public packages. Set the package to public in:"
-            echo "::warning::https://github.com/orgs/${{ github.repository_owner }}/packages/container/agent-memory-ledger%2F${{ matrix.arch }}/settings"
+            echo "::warning::Home Assistant needs public packages. Set the package to public:"
+            echo "::warning::${settings_url}"
+          else
+            echo "::notice::Verified anonymous pull for ${image}"
           fi

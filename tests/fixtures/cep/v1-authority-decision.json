@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "event_id": "d5b3c4e6-8a0f-4c3d-9e5f-4b7c9d1e3f2a",
+  "source": "home-assistant",
+  "source_agent": "authority-service",
+  "event_type": "AuthorityDecisionRecorded",
+  "occurred_at": "2026-07-01T12:10:00Z",
+  "payload": {
+    "actor_ref": "agent-42",
+    "proposed_transformation_ref": "transform-9",
+    "decision": "allow",
+    "decision_time": "2026-07-01T12:10:00Z"
+  },
+  "provenance": {
+    "origin": "home-assistant/authority-service"
+  }
+}

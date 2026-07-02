@@ -1,4 +1,18 @@
+# Local agent/editor working state — not shipped addon source
+.agents/
 .claude/
+.omc/
+.logs/
+.serena/
+.vs/
+.tmp/
+
+# Python caches
 .pytest_cache/
+.ruff_cache/
 __pycache__/
+
+# Vendored/build dirs
 .git/
+.venv/
+tmp/

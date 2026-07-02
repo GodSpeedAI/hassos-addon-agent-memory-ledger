@@ -1,0 +1,28 @@
+{
+  "schema_version": "v1",
+  "event_id": "c4a2b3d5-7f9e-4b2c-8d4e-3a6b8c0d2e1f",
+  "idempotency_key": "c4a2b3d5-7f9e-4b2c-8d4e-3a6b8c0d2e1f",
+  "source": "sea-forge",
+  "source_agent": "godspeed_agent",
+  "event_type": "SettlementRecorded",
+  "occurred_at": "2026-07-01T12:05:00Z",
+  "correlation_id": "wr-0001",
+  "causation_id": "evidence-0001",
+  "trace_id": "trace-0001",
+  "payload": {
+    "work_request_id": "wr-0001",
+    "proof_result_id": "proof-0001",
+    "evidence_event_id": "evidence-0001",
+    "outcome": "usable",
+    "outcome_reason": "Observed result matches expected result",
+    "context_packet_id": null,
+    "settled_at": "2026-07-01T12:05:00Z"
+  },
+  "provenance": {
+    "origin": "godspeed_agent/agentic_capability_loop",
+    "chain": ["evidence-0001", "proof-0001"]
+  },
+  "metadata": {
+    "completeness_status": "complete_for_context"
+  }
+}
