@@ -12,6 +12,7 @@ in `TestContractPinDrift` fail if any vendored copy is edited by a single byte
 or falls out of sync with the pin.
 
 The canonical sources remain:
+
 - v1 wire schemas: this `contracts/` directory (the enforcement point).
 - CEP-0008 profile + mapping: the CEP repo (`schemas/semantic-envelope.schema.json`,
   `schemas/semantic-envelope.mapping.md`).

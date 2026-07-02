@@ -7,7 +7,9 @@ This document describes how the Home Assistant Agent Memory Ledger Addon integra
 The bridge worker connects directly to the local NATS server (specified via the `nats_url` option in `config.yaml`) and subscribes to the `SEA_LEDGER` stream (subject wildcard `sea.agent.event.>`).
 
 ### Message ID Resolution & Deduplication
+
 To preserve replay safety and strict idempotency, every message is assigned a unique message ID to prevent duplicate writes:
+
 1. **X-Idempotency-Key Header**: Custom HTTP-style header (priority 1).
 2. **Nats-Msg-Id Header**: Native NATS JetStream message ID (priority 2).
 3. **Envelope Event ID**: The UUID found inside the standard v1 JSON telemetry envelope (`event_id` field) (priority 3).
@@ -18,6 +20,7 @@ To preserve replay safety and strict idempotency, every message is assigned a un
 Memory objects are stored under the PostgreSQL schema `memory.items`. In addition to raw observation ingestion, the bridge listens for explicit memory lifecycle transition events published on the subject wildcard `sea.memory.lifecycle.*`.
 
 ### Transition Event Format (v1 Envelope)
+
 Transition requests map to the following JSON structure:
 
 ```json
@@ -40,7 +43,9 @@ Transition requests map to the following JSON structure:
 > The `event_type` in general telemetry envelopes is used for human-readable logging and routing; for memory lifecycle transitions, the routing is determined by the NATS subject prefix `sea.memory.lifecycle.*`, and the transition payload contains the domain fields (`memory_item_id`, `new_status`, `changed_by`, and optionally `reason`) directly within the `payload` block.
 
 ### Database Operations
+
 When a transition request is received, the bridge executes a single transactional state update:
+
 1. **Locks the Row**: Acquires a `FOR UPDATE` lock on `memory.items` for `memory_item_id`.
 2. **Captures Current State**: Extracts the `old_status` of the memory item.
 3. **Validates FSM State Transition**: Assures that the transition from `old_status` to `new_status` is allowed according to the lifecycle finite state machine (e.g. `observed` -> `candidate` -> `accepted` / `rejected` -> `verified` / `expired` -> `superseded`). If the transition is illegal, it rejects the message to the dead-letter queue.

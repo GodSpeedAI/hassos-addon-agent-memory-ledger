@@ -361,12 +361,12 @@ Memory writes always enter the system with status `candidate`. Promotion to `acc
 
 **Required payload fields:**
 
-| Field              | Type            | Description                                                                                                                                   |
-| ------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `memory_item_id`   | `string`        | The ID of the memory item this lifecycle event applies to. Must reference an existing memory item.                                            |
-| `new_status`       | `string (enum)` | Target lifecycle status. One of: `observed`, `candidate`, `accepted`, `verified`, `superseded`, `rejected`, `expired`.                        |
-| `changed_by`       | `string`        | Identity reference of the agent or system performing the transition.                                                                          |
-| `reason`           | `string`        | Machine-readable reason code for the transition. Example: `governance_approved`, `verification_passed`, `superseded_by_newer`, `ttl_expired`. |
+| Field            | Type            | Description                                                                                                                                   |
+| ---------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `memory_item_id` | `string`        | The ID of the memory item this lifecycle event applies to. Must reference an existing memory item.                                            |
+| `new_status`     | `string (enum)` | Target lifecycle status. One of: `observed`, `candidate`, `accepted`, `verified`, `superseded`, `rejected`, `expired`.                        |
+| `changed_by`     | `string`        | Identity reference of the agent or system performing the transition.                                                                          |
+| `reason`         | `string`        | Machine-readable reason code for the transition. Example: `governance_approved`, `verification_passed`, `superseded_by_newer`, `ttl_expired`. |
 
 **Optional payload fields:**
 

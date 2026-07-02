@@ -8,6 +8,43 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 This changelog was introduced after earlier tagged releases, so pre-0.3.0 history may be backfilled incrementally.
 
+## [0.4.0] - 2026-07-02
+
+### Fixed
+
+- Resolved the release/deploy build failure that blocked all 0.3.x image
+  publications: removed the `python3 -m ensurepip` step from the Dockerfile that
+  failed under PEP 668 (`externally-managed-environment`). Bridge Python
+  dependencies now install via `pip install --break-system-packages`.
+- Prettier formatting failures that left CI red across `CLAUDE.md`, the SEA
+  Event Contract docs, the telemetry integration guide, and the CEP-0008
+  conformance reference.
+
+### Changed
+
+- **Deploy image tagging is now sourced from the published release tag**, not
+  from `version:` in `config.yaml`. This eliminates the drift that previously
+  produced mislabeled images (a release whose `config.yaml` still read
+  `version: dev` tagged the image `:dev` instead of the release version).
+  A pre-build guard now fails the job if the release tag and `config.yaml`
+  version disagree, since Home Assistant pulls `{image}:{config_version}`.
+- The `workflow_run` (Dependencies) and `workflow_dispatch` deploy triggers now
+  rebuild and re-tag the **latest published release** against refreshed
+  dependency images, instead of tagging whatever `config.yaml` happened to read.
+  When no release exists yet, these triggers skip cleanly.
+- Pinned every Docker/checkout action in `deploy.yaml` to immutable commit SHAs
+  at Node.js 24-compatible releases, matching `ci.yaml`'s pinning posture and
+  clearing the Node.js 20 runner deprecation.
+- `version:` on `main` now tracks the latest released version. The previous
+  practice of reverting it to `dev` between releases is unsafe for a
+  pre-built-image add-on: Home Assistant reads it to select the image tag.
+
+### Added
+
+- `.prettierignore` now excludes local agent/editor working state (`.agents/`,
+  `.omc/`, `.logs/`, `.serena/`, `.vs/`, `.venv/`, `tmp/`, caches) so generated
+  and working files no longer break the Prettier CI gate.
+
 ## [0.3.2] - 2026-05-19
 
 ### Fixed
