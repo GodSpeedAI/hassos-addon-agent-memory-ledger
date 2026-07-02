@@ -8,6 +8,27 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 This changelog was introduced after earlier tagged releases, so pre-0.3.0 history may be backfilled incrementally.
 
+## [0.4.1] - 2026-07-02
+
+### Changed
+
+- Main README de-branded: replaced product-specific "ZeroClaw" references with
+  the generic "Governed Agent Runtime(s)" term. SEA Forge references retained.
+
+### Fixed
+
+- Dependencies workflow no longer builds arm64 dependency images under QEMU
+  cross-emulation. The `publish` job (pgagent, postgis, system-stat,
+  timescaledb-tools) now builds each architecture on **native runners**
+  (`ubuntu-24.04-arm` for arm64) and merges them into a multi-arch manifest —
+  matching the approach already used for timescaledb-toolkit and ruvector. This
+  eliminates the multi-hour arm64 build path.
+
+### Removed
+
+- Orphan remote tags `v0.3.0`, `v0.3.1`, `v0.3.2` (tags with no published
+  release and no image — their deploys had failed pre-0.4.0).
+
 ## [0.4.0] - 2026-07-02
 
 ### Fixed

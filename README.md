@@ -1,10 +1,10 @@
 # Agent Memory Ledger
 
-## Local-First Governance Substrate for SEA Forge and ZeroClaw
+## Local-First Governance Substrate for SEA Forge and Governed Agent Runtimes
 
 Agent Memory Ledger is a local-first persistence, governance, memory, and
 event-bridge substrate for [SEA Forge](https://github.com/GodSpeedAI) and
-ZeroClaw governed agent runtimes. It runs as a Home Assistant add-on for
+governed agent runtimes. It runs as a Home Assistant add-on for
 convenient installation and local operation on home and lab infrastructure.
 
 It provides:
@@ -39,7 +39,7 @@ complex.
 ## Architecture
 
 ```text
-ZeroClaw / SEA Forge Agents
+Governed Agent Runtimes / SEA Forge Agents
         |
         | NATS JetStream (transport)
         v
@@ -68,7 +68,7 @@ ZeroClaw / SEA Forge Agents
 | RuVector       | Vector similarity search over qualified memory | No         |
 | Audit views    | Derived evidence views over canonical history  | No         |
 
-## Quick Start for SEA Forge / ZeroClaw
+## Quick Start for SEA Forge / Governed Agent Runtimes
 
 ### 1. Install the Add-on
 
@@ -699,7 +699,7 @@ External tools connect using standard PostgreSQL connection strings:
 # Read-only queries (Grafana, analytics, audit tools)
 postgresql://ledger_reader:your-password@homeassistant.local:5432/agent_memory
 
-# Canonical event writes (SEA Forge agents, ZeroClaw)
+# Canonical event writes (SEA Forge agents, governed agent runtimes)
 postgresql://ledger_writer:your-password@homeassistant.local:5432/agent_memory
 
 # Oxigraph projection worker
@@ -777,13 +777,13 @@ provided by the add-on.
 ## SEA Forge Bridge
 
 The `sea_bridge` configuration block enables a NATS JetStream event bridge for
-SEA Forge and ZeroClaw integration. The bridge connects the Agent Memory
+SEA Forge and governed agent runtime integration. The bridge connects the Agent Memory
 Ledger's Postgres-based canonical event store to external agent runtimes.
 
 **Postgres remains the canonical source of truth.** JetStream is transport and
 replay surface, not authority.
 
-This feature is intended for SEA Forge / ZeroClaw users who need governed event
+This feature is intended for SEA Forge / governed agent runtime users who need governed event
 bridging between the Agent Memory Ledger and external agent runtimes. Casual
 Home Assistant users do not need to configure it.
 
@@ -1511,7 +1511,7 @@ The Oxigraph validation covers:
 
 ## Example Use Cases
 
-### SEA Forge / ZeroClaw Agent Governance
+### SEA Forge / Governed Agent Runtime Governance
 
 Govern autonomous coding agents, track tool invocations, enforce policy on file
 mutations, record governance decisions, and maintain replayable provenance for

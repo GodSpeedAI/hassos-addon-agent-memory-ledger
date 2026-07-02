@@ -39,13 +39,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Dependency images that compile C/Rust extensions from source. Building the
+  # arm64 image under QEMU cross-emulation is extremely slow, so each
+  # architecture is built on native runners and the results merged into a single
+  # multi-arch manifest. (Same approach already used for timescaledb-toolkit
+  # and ruvector below.)
   publish:
-    name: Publish ${{ matrix.component }}
-    runs-on: ubuntu-latest
+    name: Publish ${{ matrix.component }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
+        component:
+          - timescaledb-tools
+          - pgagent-pg16
+          - pgagent-pg17
+          - postgis-pg16
+          - postgis-pg17
+          - postgresql-extension-system-stat-pg16
+          - postgresql-extension-system-stat-pg17
+        arch:
+          - amd64
+          - arm64
         include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
           - component: timescaledb-tools
             version: latest
           - component: pgagent-pg16
@@ -68,13 +90,6 @@ jobs:
           inputs.component == 'all' ||
           inputs.component == matrix.component
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        if: >-
-          github.event_name != 'workflow_dispatch' ||
-          inputs.component == 'all' ||
-          inputs.component == matrix.component
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: >-
@@ -103,16 +118,69 @@ jobs:
         with:
           context: .
           file: ./agent_memory_ledger/docker-dependencies/${{ matrix.component }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
           build-args: |
             VERSION=${{ matrix.version }}
           cache-from: |
-            type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:cache
+            type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:cache-${{ matrix.arch }}
           cache-to: |
-            type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:cache,mode=max
+            type=registry,ref=ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:cache-${{ matrix.arch }},mode=max
           tags: |
-            ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:${{ matrix.version }}
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:${{ matrix.version }}-${{ matrix.arch }}
+
+  manifest:
+    name: Merge ${{ matrix.component }} manifest
+    needs: publish
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        component:
+          - timescaledb-tools
+          - pgagent-pg16
+          - pgagent-pg17
+          - postgis-pg16
+          - postgis-pg17
+          - postgresql-extension-system-stat-pg16
+          - postgresql-extension-system-stat-pg17
+        include:
+          - component: timescaledb-tools
+            version: latest
+          - component: pgagent-pg16
+            version: pgagent-4.2.3
+          - component: pgagent-pg17
+            version: pgagent-4.2.3
+          - component: postgis-pg16
+            version: 3.6.3
+          - component: postgis-pg17
+            version: 3.6.3
+          - component: postgresql-extension-system-stat-pg16
+            version: "4.1"
+          - component: postgresql-extension-system-stat-pg17
+            version: "4.1"
+    steps:
+      - name: Log in to GitHub Container Registry
+        if: >-
+          github.event_name != 'workflow_dispatch' ||
+          inputs.component == 'all' ||
+          inputs.component == matrix.component
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-arch manifest
+        if: >-
+          github.event_name != 'workflow_dispatch' ||
+          inputs.component == 'all' ||
+          inputs.component == matrix.component
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:${{ matrix.version }} \
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:${{ matrix.version }}-amd64 \
+            ghcr.io/godspeedai/agent-memory-ledger/dependency/${{ matrix.component }}:${{ matrix.version }}-arm64
 
   # TimescaleDB Toolkit is a Rust extension built with cargo-pgrx. Building the
   # arm64 image under QEMU is extremely slow, so build each architecture natively
