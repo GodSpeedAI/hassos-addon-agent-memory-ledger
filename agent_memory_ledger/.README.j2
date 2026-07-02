@@ -163,7 +163,7 @@ If a password is empty, the corresponding role is not created. This allows incre
 
 #### Option: `sea_bridge`
 
-SEA Forge NATS JetStream event bridge for ZeroClaw and SEA-governed agent runtimes. Postgres remains the canonical source of truth. JetStream is transport and replay, not authority.
+SEA Forge NATS JetStream event bridge for governed agent runtimes. Postgres remains the canonical source of truth. JetStream is transport and replay, not authority.
 
 **Requires `agent_memory.enabled: true`.**
 
@@ -246,8 +246,8 @@ The architecture images must be public in GHCR before Home Assistant can install
 pull one of the images for the desired architecture from GitHub Container Registry:
 
 ```
-docker pull ghcr.io/godspeedai/agent-memory-ledger/amd64:0.4.0
-docker pull ghcr.io/godspeedai/agent-memory-ledger/aarch64:0.4.0
+docker pull ghcr.io/godspeedai/agent-memory-ledger/amd64:0.4.1
+docker pull ghcr.io/godspeedai/agent-memory-ledger/aarch64:0.4.1
 ```
 
 Use the tag that matches the add-on version you want to run.
@@ -260,7 +260,7 @@ docker run \
   --name agent-memory-ledger \
   -v ${PWD}/agent_memory_ledger_addon_data:/data \
   -p 5432:5432 \
-  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.4.0
+  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.4.1
 ```
 
 This will use ~/agent_memory_ledger_addon_data as the data directory for the container, and map the port 5432 to the host.
@@ -273,7 +273,7 @@ docker run \
   --name agent-memory-ledger \
   -v ${PWD}/agent_memory_ledger_addon_data:/data \
   -p 5432:5432 \
-  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.4.0
+  ghcr.io/godspeedai/agent-memory-ledger/amd64:0.4.1
 ```
 
 ## Usage
