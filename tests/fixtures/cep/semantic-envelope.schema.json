@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cep.dev/schemas/semantic-envelope.schema.json",
+  "title": "CEP-0008 Semantic Envelope (v1 flat profile)",
+  "description": "JSON Schema profile of CEP-0008's Semantic Envelope, scoped to the fields the v1 flat contract (sea.agent.event.v1.json) can carry. Field names are v1's own; see semantic-envelope.mapping.md for the CEP-0008 distinction each maps to and for the gap this profile does not close.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "source_agent",
+    "occurred_at",
+    "payload",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v1",
+      "description": "Maps to CEP-0008 cep_version/envelope_version (SS7.1 Identity)."
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Maps to CEP-0008 envelope_id (SS7.1 Identity)."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Maps to CEP-0008 lineage_refs (SS7.1 Identity): distinguishes original from replayed envelope."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["zeroclaw", "sea-forge", "home-assistant", "other"],
+      "description": "Maps to CEP-0008 source_system_refs (SS7.2 Recommended Identity)."
+    },
+    "source_agent": {
+      "type": "string",
+      "description": "Maps to CEP-0008 created_by (SS7.1 Identity)."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Maps to CEP-0008 envelope_kind (SS9 Envelope Kinds)."
+    },
+    "occurred_at": {
+      "type": "string",
+      "description": "Maps to CEP-0008 created_at (SS7.1 Identity)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Maps to CEP-0008 trace_refs / SS45 Trace Record envelope_refs."
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "Maps to CEP-0008 SS45 Trace Record ordering_rule (which envelope caused this one)."
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Maps to CEP-0008 SS45 trace_id."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Opaque carrier for CEP-0008's states, transformations, questions, claims, evidence, and settlements sections (SS23-29). Structure is event_type-specific and not enforced by this profile."
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Maps to CEP-0008 SS15 Envelope Provenance Record. Required here (stricter than v1's own optional field) because CEP-0008 SS15.2 treats an envelope without provenance as not settlement-valid.",
+      "required": ["origin"],
+      "properties": {
+        "origin": {
+          "type": "string",
+          "description": "Maps to CEP-0008 provenance_id / derived_from."
+        },
+        "chain": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Maps to CEP-0008 source_envelope_refs / transformation_refs."
+        }
+      },
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Opaque carrier for CEP-0008 boundary_record, completeness_status, omission_status, and conformance_status (SS8, SS10, SS34, SS38). Not enforced by this profile; see semantic-envelope.mapping.md gap note."
+    }
+  },
+  "additionalProperties": false
+}

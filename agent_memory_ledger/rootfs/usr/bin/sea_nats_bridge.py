@@ -300,6 +300,7 @@ _ENVELOPE_REQUIRED = {
     "source_agent",
     "occurred_at",
     "payload",
+    "provenance",  # F-06: required at the contract + runtime layer (CEP-0008 SS15).
 }
 
 # Subject-specific payload required fields
@@ -1264,6 +1265,47 @@ class SEABridge:
             LOG.info("Dead-lettered: %s (%s)", subject, reason)
         except Exception:
             LOG.exception("Failed to publish dead letter to NATS")
+
+    async def fetch_dead_letters(self, cur: psycopg.AsyncCursor, limit: int = 100) -> list[dict[str, Any]]:
+        """Inspect rejected messages for replay.
+
+        The NATS dead-letter subject itself is not persisted (it is not part
+        of any JetStream stream's subject list), so Postgres is the durable
+        source of truth for what was rejected and why: inbox_events rows
+        with status 'failed' or 'dead_letter', joined against their most
+        recent delivery_attempts row for the rejection reason.
+        """
+        await cur.execute(
+            """
+            SELECT i.id, i.source_queue, i.message_id, i.payload, i.status,
+                   i.received_at, d.error_message
+            FROM event_log.inbox_events i
+            LEFT JOIN LATERAL (
+                SELECT error_message
+                FROM event_log.delivery_attempts
+                WHERE parent_event_id = i.id AND direction = 'inbound'
+                ORDER BY started_at DESC
+                LIMIT 1
+            ) d ON true
+            WHERE i.status IN ('failed', 'dead_letter')
+            ORDER BY i.received_at DESC
+            LIMIT %s
+            """,
+            [limit],
+        )
+        rows = await cur.fetchall()
+        return [
+            {
+                "id": row[0],
+                "source_queue": row[1],
+                "message_id": row[2],
+                "payload": row[3],
+                "status": row[4],
+                "received_at": row[5],
+                "error_message": row[6],
+            }
+            for row in rows
+        ]
 
 
 # ---------------------------------------------------------------------------

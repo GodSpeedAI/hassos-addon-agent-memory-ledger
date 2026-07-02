@@ -159,6 +159,7 @@ class TestInboundProcessing:
                 "changed_by": "test-agent",
                 "reason": "governance_approved",
             },
+            "provenance": {"origin": "test-agent", "chain": []},
         }
         msg = _make_nats_msg(
             "sea.memory.lifecycle.accepted",

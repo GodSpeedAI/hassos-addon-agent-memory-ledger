@@ -1,0 +1,12 @@
+{
+  "schema_version": "v1",
+  "event_id": "b3f1a2c4-6e8d-4a1b-9c3d-2f5e7a9b1c0d",
+  "source_agent": "godspeed_agent",
+  "occurred_at": "2026-07-01T12:00:00Z",
+  "payload": {
+    "work_request_id": "wr-0001"
+  },
+  "provenance": {
+    "origin": "godspeed_agent/agentic_capability_loop"
+  }
+}
