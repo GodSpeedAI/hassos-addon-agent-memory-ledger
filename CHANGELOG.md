@@ -35,6 +35,10 @@ This changelog was introduced after earlier tagged releases, so pre-0.3.0 histor
 - Pinned every Docker/checkout action in `deploy.yaml` to immutable commit SHAs
   at Node.js 24-compatible releases, matching `ci.yaml`'s pinning posture and
   clearing the Node.js 20 runner deprecation.
+- The publish job now builds each architecture on **native runners**
+  (`ubuntu-24.04-arm` for aarch64) instead of QEMU cross-emulation, mirroring
+  the CI build job. This removes a class of pathologically slow / fragile
+  aarch64 builds.
 - `version:` on `main` now tracks the latest released version. The previous
   practice of reverting it to `dev` between releases is unsafe for a
   pre-built-image add-on: Home Assistant reads it to select the image tag.

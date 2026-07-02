@@ -30,7 +30,9 @@ jobs:
     if: >-
       ${{ github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    # Native runners per arch — avoids QEMU cross-emulation, which previously
+    # made aarch64 builds pathologically slow/fragile. Mirrors ci.yaml's build job.
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -98,10 +100,6 @@ jobs:
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
           echo "should_run=true" >> "${GITHUB_OUTPUT}"
           echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "${GITHUB_OUTPUT}"
-
-      - name: Set up QEMU
-        if: steps.addon.outputs.should_run == 'true'
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8
 
       - name: Set up Docker Buildx
         if: steps.addon.outputs.should_run == 'true'
